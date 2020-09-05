@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"Panda/cmd/panda"
 	"fmt"
 	"os"
 
@@ -12,6 +13,7 @@ var rootCmd = &cobra.Command{
 	Short: "Panda 是一个由 Golang 实现的代理服务器",
 	Long: "Panda 是一个由 Golang 实现的代理服务器",
 	Run: func(cmd *cobra.Command, args []string) {
+		panda.Server()
 	},
 }
 
