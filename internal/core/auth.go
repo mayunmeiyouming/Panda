@@ -2,6 +2,7 @@ package core
 
 import (
 	"Panda/utils"
+	"encoding/binary"
 	"net"
 )
 
@@ -14,28 +15,36 @@ type SocksAuthRequest struct {
 
 // SocksAddressRequest 是客户端告诉服务端目标地址的请求
 type SocksAddressRequest struct {
-	VERSION                int32
-	COMMAND                int32
-	RSV                    int32 // 保留位
-	AddressType            int32
-	DestinationAddress     int32
-	DestinationAddressPORT int32
+	VER       uint8
+	CMD       uint8
+	RSV       uint8 // 保留位
+	ATYP      uint8
+	DSTADDR   []byte
+	DSTPORT   uint16
+	DSTDOMAIN string
 }
 
 // SocksAuth 是协商认证阶段
-func SocksAuth(conn *net.TCPConn) {
+func SocksAuth(conn *net.TCPConn) error {
 	// 协商认证方法
-	socksAuthRequest, n := parseSocksAuthRequest(conn)
-	responseAuth(conn, socksAuthRequest, n)
+	socksAuthRequest, err := parseSocksAuthRequest(conn)
+	if err != nil {
+		return err
+	}
+	err = responseAuth(conn, socksAuthRequest)
+	if err != nil {
+		return err
+	}
 
 	// 获取代理地址
-	getSocksAddress(conn)
+	parseSocksAddressRequest(conn)
 
+	return nil
 }
 
-func parseSocksAuthRequest(conn *net.TCPConn) (*SocksAuthRequest, int) {
+func parseSocksAuthRequest(conn *net.TCPConn) (*SocksAuthRequest, error) {
 	b := make([]byte, 1024)
-	n, _ := conn.Read(b)
+	n, err := conn.Read(b)
 
 	if n >= 3 {
 		socksAuthRequest := &SocksAuthRequest{
@@ -44,27 +53,55 @@ func parseSocksAuthRequest(conn *net.TCPConn) (*SocksAuthRequest, int) {
 			METHODS:  int32(b[2]),
 		}
 		utils.Log.Debug(socksAuthRequest)
-		return socksAuthRequest, n
+		return socksAuthRequest, nil
 	}
 	utils.Log.Debug("认证协议格式错误")
 	utils.Log.Debug("length: ", n)
-	return nil, n
+	return nil, err
 }
 
-func responseAuth(conn *net.TCPConn, socks *SocksAuthRequest, len int) {
+func responseAuth(conn *net.TCPConn, socks *SocksAuthRequest) error {
 	b := []byte{0x05, 0x00}
 	utils.Log.Debug(conn.RemoteAddr())
-	if len >= 3 {
-		utils.Log.Debug(b[0:2])
-		c, err := conn.Write(b[0:2])
-		utils.Log.Debug(c, err)
-	} else {
-		return
+	_, err := conn.Write(b[0:2])
+	if err != nil {
+		return err
 	}
+	return nil
 }
 
-func getSocksAddress(conn *net.TCPConn) {
+func parseSocksAddressRequest(conn *net.TCPConn) (*SocksAddressRequest, error) {
 	buf := make([]byte, 1024)
 	n, _ := conn.Read(buf[0:])
-	utils.Log.Debug("length: ", n)
+
+	socksAddressRequest := SocksAddressRequest{
+		VER:  uint8(buf[0]),
+		CMD:  uint8(buf[1]),
+		RSV:  uint8(buf[2]),
+		ATYP: uint8(buf[3]),
+	}
+
+	if socksAddressRequest.ATYP == 1 {
+		// IPv4
+		socksAddressRequest.DSTADDR = buf[4:8]
+		utils.Log.Debug("IPv4")
+	} else if socksAddressRequest.ATYP == 3 {
+		// Domain
+		socksAddressRequest.DSTDOMAIN = string(buf[5 : n-2])
+		ipAddr, err := net.ResolveIPAddr("ip", socksAddressRequest.DSTDOMAIN)
+		if err != nil {
+			return nil, err
+		}
+		socksAddressRequest.DSTADDR = ipAddr.IP
+		utils.Log.Debug("Domain")
+	} else if socksAddressRequest.ATYP == 4 {
+		// IPv6
+		socksAddressRequest.DSTADDR = buf[4 : 4+net.IPv6len]
+		utils.Log.Debug("IPv6")
+	}
+
+	socksAddressRequest.DSTPORT = binary.BigEndian.Uint16(buf[n-2 : n])
+
+	utils.Log.Debug(socksAddressRequest)
+	return &socksAddressRequest, nil
 }
