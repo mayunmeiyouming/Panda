@@ -17,8 +17,9 @@ func Server(port string) {
 	if err != nil {
 		utils.Log.Error("监听端口失败，端口可能被占用")
 	}
-	utils.Log.Debug("等待连接")
+
 	for {
+		utils.Log.Debug("等待连接")
 		client, err := l.AcceptTCP()
 		if err != nil {
 			utils.Log.Error(err)
@@ -33,5 +34,5 @@ func handleClientRequest(client *net.TCPConn) {
 		return
 	}
 	defer client.Close()
-	core.SocksAuth(client)
+	core.SocksServe(client)
 }

@@ -5,24 +5,31 @@ import (
 	"net"
 )
 
-// SocksAuthRequest ...
+// SocksAuthRequest 是客户端的协商请求
 type SocksAuthRequest struct {
 	VERSION  int32
 	NMETHODS int32
 	METHODS  int32
 }
 
+// SocksAddressRequest 是客户端告诉服务端目标地址的请求
+type SocksAddressRequest struct {
+	VERSION                int32
+	COMMAND                int32
+	RSV                    int32 // 保留位
+	AddressType            int32
+	DestinationAddress     int32
+	DestinationAddressPORT int32
+}
+
 // SocksAuth ...
 func SocksAuth(conn *net.TCPConn) {
+	// 协商认证方法
 	socksAuthRequest, n := parseSocksAuthRequest(conn)
 	responseAuth(conn, socksAuthRequest, n)
-	buf := make([]byte, 1024)
-	n, _ = conn.Read(buf[0:])
-	if n != 0 {
-		utils.Log.Debug("success")
-	} else {
-		utils.Log.Warn("fail")
-	}
+
+	// 获取代理地址
+	getSocksAddress(conn)
 
 }
 
@@ -46,22 +53,18 @@ func parseSocksAuthRequest(conn *net.TCPConn) (*SocksAuthRequest, int) {
 
 func responseAuth(conn *net.TCPConn, socks *SocksAuthRequest, len int) {
 	b := []byte{0x05, 0x00}
-	// conn.Write(b)
 	utils.Log.Debug(conn.RemoteAddr())
-	// address := conn.RemoteAddr()
-	//获得了请求的host和port，就开始拨号吧
-	// server, err := net.Dial("tcp", address.String())
-	// if err != nil {
-	// 	log.Println(err)
-	// 	return
-	// }
-	// server.Write(b[:])
-	if len == 3 {
-		// io.Copy(conn, bytes.NewReader(b))
+	if len >= 3 {
 		utils.Log.Debug(b[0:2])
 		c, err := conn.Write(b[0:2])
 		utils.Log.Debug(c, err)
 	} else {
 		return
 	}
+}
+
+func getSocksAddress(conn *net.TCPConn) {
+	buf := make([]byte, 1024)
+	n, _ := conn.Read(buf[0:])
+	utils.Log.Debug("length: ", n)
 }
