@@ -9,13 +9,14 @@ import (
 // Server 是 Panda 的实际入口
 func Server(port string) {
 	log.SetFlags(log.LstdFlags | log.Lshortfile)
-	l, err := net.Listen("tcp", ":"+port)
+	listenAddr, err := net.ResolveTCPAddr("tcp", ":"+port)
+	l, err := net.ListenTCP("tcp", listenAddr)
 	if err != nil {
 		log.Panic(err)
 	}
 	log.Println("等待连接")
 	for {
-		client, err := l.Accept()
+		client, err := l.AcceptTCP()
 		if err != nil {
 			log.Panic(err)
 		}
@@ -24,10 +25,10 @@ func Server(port string) {
 	}
 }
 
-func handleClientRequest(client net.Conn) {
+func handleClientRequest(client *net.TCPConn) {
 	if client == nil {
 		return
 	}
 	defer client.Close()
-	core.BuildConn(client)
+	core.SocksAuth(client)
 }
