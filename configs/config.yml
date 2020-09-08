@@ -1,0 +1,6 @@
+LoggerConfig:
+    DebugMode: true
+    FileName: /var/log/panda.log
+    MaxSize: 200
+    MaxBackups: 3
+    MaxAge: 30

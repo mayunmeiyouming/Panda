@@ -1,26 +1,29 @@
 package panda
 
 import (
-	"Panda/core"
-	"log"
+	"Panda/internal/config"
+	"Panda/internal/core"
+	"Panda/utils"
 	"net"
 )
 
 // Server 是 Panda 的实际入口
 func Server(port string) {
-	log.SetFlags(log.LstdFlags | log.Lshortfile)
+	config.InitConfiguration("config", "./configs/", &config.CONFIG)
+	utils.InitLogger(config.CONFIG.LoggerConfig)
+
 	listenAddr, err := net.ResolveTCPAddr("tcp", ":"+port)
 	l, err := net.ListenTCP("tcp", listenAddr)
 	if err != nil {
-		log.Panic(err)
+		utils.Log.Error("监听端口失败，端口可能被占用")
 	}
-	log.Println("等待连接")
+	utils.Log.Debug("等待连接")
 	for {
 		client, err := l.AcceptTCP()
 		if err != nil {
-			log.Panic(err)
+			utils.Log.Error(err)
 		}
-		log.Println("正在处理请求中")
+		utils.Log.Debug("正在处理请求中")
 		go handleClientRequest(client)
 	}
 }
