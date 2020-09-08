@@ -22,7 +22,7 @@ type SocksAddressRequest struct {
 	DestinationAddressPORT int32
 }
 
-// SocksAuth ...
+// SocksAuth 是协商认证阶段
 func SocksAuth(conn *net.TCPConn) {
 	// 协商认证方法
 	socksAuthRequest, n := parseSocksAuthRequest(conn)
