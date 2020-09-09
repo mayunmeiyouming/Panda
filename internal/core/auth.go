@@ -1,8 +1,10 @@
 package core
 
 import (
+	"time"
 	"Panda/utils"
 	"encoding/binary"
+	"errors"
 	"net"
 )
 
@@ -22,7 +24,7 @@ type SocksAddressRequest struct {
 	DSTADDR   []byte
 	DSTPORT   uint16
 	DSTDOMAIN string
-	RAWADDR *net.TCPAddr
+	RAWADDR   *net.TCPAddr
 }
 
 // SocksAuth 是协商认证阶段
@@ -79,8 +81,21 @@ func responseAuth(conn *net.TCPConn, socks *SocksAuthRequest) error {
 func parseSocksAddressRequest(conn *net.TCPConn) (*SocksAddressRequest, error) {
 	buf := make([]byte, 1024)
 	n, _ := conn.Read(buf[0:])
+
+	// 解决网络延时问题
 	if n == 0 {
-		utils.Log.Error("error")
+		for i := 0; i < 5; i++ {
+			time.Sleep(50 * time.Microsecond)
+			n, _ = conn.Read(buf[0:])
+			if n != 0 {
+				break
+			}
+		}
+		if n == 0 {
+			utils.Log.Error("error")
+			return nil, errors.New("未知错误")
+		}
+
 	}
 
 	socksAddressRequest := SocksAddressRequest{
@@ -101,7 +116,7 @@ func parseSocksAddressRequest(conn *net.TCPConn) (*SocksAddressRequest, error) {
 		if err != nil {
 			return nil, err
 		}
-		socksAddressRequest.DSTADDR = ipAddr.IP
+		socksAddressRequest.DSTADDR = ipAddr.IP[len(ipAddr.IP)-4:]
 		utils.Log.Debug("Domain")
 	} else if socksAddressRequest.ATYP == 4 {
 		// IPv6
