@@ -22,29 +22,30 @@ type SocksAddressRequest struct {
 	DSTADDR   []byte
 	DSTPORT   uint16
 	DSTDOMAIN string
+	RAWADDR *net.TCPAddr
 }
 
 // SocksAuth 是协商认证阶段
-func SocksAuth(conn *net.TCPConn) error {
+func SocksAuth(conn *net.TCPConn) (*SocksAddressRequest, error) {
 	// 协商认证方法
 	socksAuthRequest, err := parseSocksAuthRequest(conn)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	err = responseAuth(conn, socksAuthRequest)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	// 获取代理地址
 	socksAddressRequest, err := parseSocksAddressRequest(conn)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	// 服务端回复
 	responseSocksAddressRequest(conn, socksAddressRequest)
 
-	return nil
+	return socksAddressRequest, nil
 }
 
 func parseSocksAuthRequest(conn *net.TCPConn) (*SocksAuthRequest, error) {
@@ -78,6 +79,9 @@ func responseAuth(conn *net.TCPConn, socks *SocksAuthRequest) error {
 func parseSocksAddressRequest(conn *net.TCPConn) (*SocksAddressRequest, error) {
 	buf := make([]byte, 1024)
 	n, _ := conn.Read(buf[0:])
+	if n == 0 {
+		utils.Log.Error("error")
+	}
 
 	socksAddressRequest := SocksAddressRequest{
 		VER:  uint8(buf[0]),
@@ -107,25 +111,31 @@ func parseSocksAddressRequest(conn *net.TCPConn) (*SocksAddressRequest, error) {
 
 	socksAddressRequest.DSTPORT = binary.BigEndian.Uint16(buf[n-2 : n])
 
+	socksAddressRequest.RAWADDR = &net.TCPAddr{
+		IP:   socksAddressRequest.DSTADDR,
+		Port: int(socksAddressRequest.DSTPORT),
+	}
+
 	utils.Log.Debug(socksAddressRequest)
 	return &socksAddressRequest, nil
 }
 
 func responseSocksAddressRequest(conn *net.TCPConn, socks *SocksAddressRequest) error {
-	response := []byte{0x05, 0x00, 0x00}
-	response = append(response, socks.ATYP)
-	if socks.ATYP == 1 {
-		// IPv4
-		response = append(response, socks.DSTADDR...)
-	} else if socks.ATYP == 3 {
-		// Domain
-		b := []byte(socks.DSTDOMAIN)
-		response = append(response, byte(len(b)))
-		response = append(response, b...)
-	} else if socks.ATYP == 4 {
-		// IPv6
-		response = append(response, socks.DSTADDR...)
-	}
+	response := []byte{0x05, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00}
+	conn.Write(response)
+	// response = append(response, socks.ATYP)
+	// if socks.ATYP == 1 {
+	// 	// IPv4
+	// 	response = append(response, socks.DSTADDR...)
+	// } else if socks.ATYP == 3 {
+	// 	// Domain
+	// 	b := []byte(socks.DSTDOMAIN)
+	// 	response = append(response, byte(len(b)))
+	// 	response = append(response, b...)
+	// } else if socks.ATYP == 4 {
+	// 	// IPv6
+	// 	response = append(response, socks.DSTADDR...)
+	// }
 
 	// response = append(response, binary.BigEndian.by socks.ATYP)
 	return nil
