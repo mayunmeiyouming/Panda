@@ -37,7 +37,12 @@ func SocksAuth(conn *net.TCPConn) error {
 	}
 
 	// 获取代理地址
-	parseSocksAddressRequest(conn)
+	socksAddressRequest, err := parseSocksAddressRequest(conn)
+	if err != nil {
+		return err
+	}
+	// 服务端回复
+	responseSocksAddressRequest(conn, socksAddressRequest)
 
 	return nil
 }
@@ -104,4 +109,24 @@ func parseSocksAddressRequest(conn *net.TCPConn) (*SocksAddressRequest, error) {
 
 	utils.Log.Debug(socksAddressRequest)
 	return &socksAddressRequest, nil
+}
+
+func responseSocksAddressRequest(conn *net.TCPConn, socks *SocksAddressRequest) error {
+	response := []byte{0x05, 0x00, 0x00}
+	response = append(response, socks.ATYP)
+	if socks.ATYP == 1 {
+		// IPv4
+		response = append(response, socks.DSTADDR...)
+	} else if socks.ATYP == 3 {
+		// Domain
+		b := []byte(socks.DSTDOMAIN)
+		response = append(response, byte(len(b)))
+		response = append(response, b...)
+	} else if socks.ATYP == 4 {
+		// IPv6
+		response = append(response, socks.DSTADDR...)
+	}
+
+	// response = append(response, binary.BigEndian.by socks.ATYP)
+	return nil
 }
