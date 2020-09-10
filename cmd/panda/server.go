@@ -7,7 +7,7 @@ import (
 	"net"
 )
 
-// Server 是 Panda 的实际入口
+// Server 是 Panda 的 Server 模式的实际入口
 func Server(port string) {
 	config.InitConfiguration("config", "./configs/", &config.CONFIG)
 	utils.InitLogger(config.CONFIG.LoggerConfig)

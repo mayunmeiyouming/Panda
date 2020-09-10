@@ -93,9 +93,14 @@ func parseSocksAddressRequest(conn *net.TCPConn) (*SocksAddressRequest, error) {
 		}
 		if n == 0 {
 			utils.Log.Error("error")
-			return nil, errors.New("未知错误")
+			return nil, errors.New("可能网络不通")
 		}
 
+	}
+
+	// 判断第二阶段请求包是否完整
+	if len(buf) < 10 {
+		return nil, errors.New("第二阶段请求包不完整")
 	}
 
 	socksAddressRequest := SocksAddressRequest{
