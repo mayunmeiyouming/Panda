@@ -60,7 +60,7 @@ func parseSocksAuthRequest(conn *net.TCPConn) (*SocksAuthRequest, error) {
 			NMETHODS: int32(b[1]),
 			METHODS:  int32(b[2]),
 		}
-		utils.Log.Debug(socksAuthRequest)
+		utils.Log.Debug("一次协商请求: ", socksAuthRequest)
 		return socksAuthRequest, nil
 	}
 	utils.Log.Debug("认证协议格式错误")
@@ -70,7 +70,7 @@ func parseSocksAuthRequest(conn *net.TCPConn) (*SocksAuthRequest, error) {
 
 func responseAuth(conn *net.TCPConn, socks *SocksAuthRequest) error {
 	b := []byte{0x05, 0x00}
-	utils.Log.Debug(conn.RemoteAddr())
+	utils.Log.Debug("一次协商回复: ", b[0:2])
 	_, err := conn.Write(b[0:2])
 	if err != nil {
 		return err
@@ -131,27 +131,34 @@ func parseSocksAddressRequest(conn *net.TCPConn) (*SocksAddressRequest, error) {
 		Port: int(socksAddressRequest.DSTPORT),
 	}
 
-	utils.Log.Debug(socksAddressRequest)
+	utils.Log.Debug("二次协商请求: ", socksAddressRequest)
+	utils.Log.Debug("客户端需要访问的服务器地址: ", socksAddressRequest.DSTADDR)
 	return &socksAddressRequest, nil
 }
 
 func responseSocksAddressRequest(conn *net.TCPConn, socks *SocksAddressRequest) error {
-	response := []byte{0x05, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00}
-	conn.Write(response)
-	// response = append(response, socks.ATYP)
-	// if socks.ATYP == 1 {
-	// 	// IPv4
-	// 	response = append(response, socks.DSTADDR...)
-	// } else if socks.ATYP == 3 {
-	// 	// Domain
-	// 	b := []byte(socks.DSTDOMAIN)
-	// 	response = append(response, byte(len(b)))
-	// 	response = append(response, b...)
-	// } else if socks.ATYP == 4 {
-	// 	// IPv6
-	// 	response = append(response, socks.DSTADDR...)
-	// }
+	response := []byte{0x05, 0x00, 0x00}
 
-	// response = append(response, binary.BigEndian.by socks.ATYP)
+	response = append(response, socks.ATYP)
+	if socks.ATYP == 1 {
+		// IPv4
+		response = append(response, socks.DSTADDR...)
+	} else if socks.ATYP == 3 {
+		// Domain
+		b := []byte(socks.DSTDOMAIN)
+		response = append(response, byte(len(b)))
+		response = append(response, b...)
+	} else if socks.ATYP == 4 {
+		// IPv6
+		response = append(response, socks.DSTADDR...)
+	}
+
+	b := []byte{0, 0}
+	binary.BigEndian.PutUint16(b, socks.DSTPORT)
+	response = append(response, b[:2]...)
+
+	utils.Log.Debug("二次协商回复: ", response)
+	conn.Write(response)
+
 	return nil
 }
