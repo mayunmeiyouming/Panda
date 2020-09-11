@@ -2,37 +2,38 @@ package utils
 
 import (
 	"Panda/internal/config"
+	"fmt"
+	"os"
+	"path"
+	"runtime"
 
-	"log"
+	"github.com/sirupsen/logrus"
 )
 
-// Log ...
-var Log Logger
+// Logger  global logger
+var Logger = logrus.New()
 
-// Logger ...
-type Logger struct {
-	config config.LoggerConfig
-}
+// InitLogger  set logger
+func InitLogger() {
+	// only log the InfoLevel or above
+	Logger.SetLevel(logrus.InfoLevel)
+	if config.CONFIG.LoggerConfig.DebugMode {
+		// log all the level
+		Logger.SetLevel(logrus.TraceLevel)
 
-// InitLogger ...
-func InitLogger(loggerConfig config.LoggerConfig) {
-	// log.SetFlags(log.LstdFlags | log.Lshortfile)
-	Log.config = loggerConfig
-}
-
-// Debug ...
-func (logger Logger) Debug(v ...interface{}) {
-	if logger.config.DebugMode == true {
-		log.Println(v...)
+		// set whether print caller
+		Logger.SetReportCaller(true)
 	}
-}
 
-// Error ...
-func (logger Logger) Error(v ...interface{}) {
-	log.Println(v...)
-}
+	// output to stdout instead of the default stderr
+	// can be any io.Writer
+	Logger.SetOutput(os.Stdout)
 
-// Warn ...
-func (logger Logger) Warn(v ...interface{}) {
-	log.Println(v...)
+	// set json formatter
+	Logger.Formatter = &logrus.JSONFormatter{
+		CallerPrettyfier: func(f *runtime.Frame) (string, string) {
+			filename := path.Dir(f.File) + "/" + path.Base(f.File)
+			return fmt.Sprintf("%s()", f.Function), fmt.Sprintf("%s:%d", filename, f.Line)
+		},
+	}
 }

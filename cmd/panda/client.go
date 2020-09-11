@@ -1,7 +1,6 @@
 package panda
 
 import (
-	"Panda/internal/config"
 	"Panda/utils"
 	"bytes"
 	"encoding/binary"
@@ -15,32 +14,30 @@ import (
 
 // Client 是 Panda 的 Client 模式的实际入口
 func Client(localePort string, remotePort string) {
-	config.InitConfiguration("config", "./configs/", &config.CONFIG)
-	utils.InitLogger(config.CONFIG.LoggerConfig)
 
 	// proxy server 地址
 	serverAddr, err := net.ResolveTCPAddr("tcp", ":"+remotePort)
 	if err != nil {
-		utils.Log.Error(err)
+		utils.Logger.Error(err)
 	}
-	utils.Log.Debug("连接远程服务器: ", remotePort+"....")
+	utils.Logger.Debug("连接远程服务器: ", remotePort+"....")
 
 	// 监听本地
 	listenAddr, err := net.ResolveTCPAddr("tcp", ":"+localePort)
 	if err != nil {
-		utils.Log.Error(err)
+		utils.Logger.Error(err)
 	}
-	utils.Log.Debug("监听本地端口: ", localePort)
+	utils.Logger.Debug("监听本地端口: ", localePort)
 
 	listener, err := net.ListenTCP("tcp", listenAddr)
 	if err != nil {
-		utils.Log.Error(err)
+		utils.Logger.Error(err)
 	}
 
 	for {
 		client, err := listener.AcceptTCP()
 		if err != nil {
-			utils.Log.Error(err)
+			utils.Logger.Error(err)
 		}
 		go handleProxyRequest(client, serverAddr)
 	}
@@ -51,8 +48,8 @@ func handleProxyRequest(client *net.TCPConn, serverAddr *net.TCPAddr) {
 	// 远程连接IO
 	dstServer, err := net.DialTCP("tcp", nil, serverAddr)
 	if err != nil {
-		utils.Log.Debug("远程服务器地址连接错误!!!")
-		utils.Log.Debug(err)
+		utils.Logger.Debug("远程服务器地址连接错误!!!")
+		utils.Logger.Debug(err)
 		return
 	}
 	defer dstServer.Close()
@@ -70,17 +67,17 @@ func handleProxyRequest(client *net.TCPConn, serverAddr *net.TCPAddr) {
 	resp := make([]byte, 1024)
 	n, err := dstServer.Read(resp)
 	if err != nil {
-		utils.Log.Error(err)
+		utils.Logger.Error(err)
 		return
 	}
 	if n == 0 {
-		utils.Log.Error("协议错误,服务器返回为空")
+		utils.Logger.Error("协议错误,服务器返回为空")
 		return
 	}
 	if resp[1] == 0x00 && n == 2 {
-		utils.Log.Debug("第一阶段协商成功")
+		utils.Logger.Debug("第一阶段协商成功")
 	} else {
-		utils.Log.Error("协议错误，连接失败")
+		utils.Logger.Error("协议错误，连接失败")
 		return
 	}
 	// 第二阶段根据认证方式执行对应的认证，由于采用无密码格式，这里省略验证
@@ -89,7 +86,7 @@ func handleProxyRequest(client *net.TCPConn, serverAddr *net.TCPAddr) {
 	buff := make([]byte, 1024)
 	n, err = client.Read(buff)
 	if err != nil {
-		utils.Log.Error(err)
+		utils.Logger.Error(err)
 		return
 	}
 	localReq := buff[:n]
@@ -108,7 +105,7 @@ func handleProxyRequest(client *net.TCPConn, serverAddr *net.TCPAddr) {
 
 	dstURI, err := url.ParseRequestURI(httpreq[1])
 	if err != nil {
-		utils.Log.Error(err)
+		utils.Logger.Error(err)
 		return
 	}
 	var dstAddr string
@@ -120,7 +117,7 @@ func handleProxyRequest(client *net.TCPConn, serverAddr *net.TCPAddr) {
 		dstAddr = dstAddrPort[0]
 		dstPort = dstAddrPort[1]
 	} else {
-		utils.Log.Debug("URL parse error!")
+		utils.Logger.Debug("URL parse error!")
 		return
 	}
 
@@ -137,7 +134,7 @@ func handleProxyRequest(client *net.TCPConn, serverAddr *net.TCPAddr) {
 	dstPortBuff := bytes.NewBuffer(make([]byte, 0))
 	dstPortInt, err := strconv.ParseUint(dstPort, 10, 16)
 	if err != nil {
-		utils.Log.Error(err)
+		utils.Logger.Error(err)
 		return
 	}
 	binary.Write(dstPortBuff, binary.BigEndian, dstPortInt)
@@ -145,22 +142,22 @@ func handleProxyRequest(client *net.TCPConn, serverAddr *net.TCPAddr) {
 	resp = append(resp, dstPortBytes[len(dstPortBytes)-2:]...)
 	n, err = dstServer.Write(resp)
 	if err != nil {
-		utils.Log.Debug(dstServer.RemoteAddr(), err)
+		utils.Logger.Debug(dstServer.RemoteAddr(), err)
 		return
 	}
 	n, err = dstServer.Read(resp[0:])
 	if err != nil {
-		utils.Log.Debug(dstServer.RemoteAddr(), err)
+		utils.Logger.Debug(dstServer.RemoteAddr(), err)
 		return
 	}
 	var targetResp [10]byte
 	copy(targetResp[:10], resp[:n])
 	specialResp := [10]byte{0x05, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00}
 	if targetResp != specialResp {
-		utils.Log.Debug("第二阶段协商出错")
+		utils.Logger.Debug("第二阶段协商出错")
 		return
 	}
-	utils.Log.Debug("认证成功")
+	utils.Logger.Debug("认证成功")
 
 	// 转发消息
 	go func() {

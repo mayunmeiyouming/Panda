@@ -60,17 +60,17 @@ func parseSocksAuthRequest(conn *net.TCPConn) (*SocksAuthRequest, error) {
 			NMETHODS: int32(b[1]),
 			METHODS:  int32(b[2]),
 		}
-		utils.Log.Debug("一次协商请求: ", socksAuthRequest)
+		utils.Logger.Debug("一次协商请求: ", socksAuthRequest)
 		return socksAuthRequest, nil
 	}
-	utils.Log.Debug("认证协议格式错误")
-	utils.Log.Debug("length: ", n)
+	utils.Logger.Debug("认证协议格式错误")
+	utils.Logger.Debug("length: ", n)
 	return nil, err
 }
 
 func responseAuth(conn *net.TCPConn, socks *SocksAuthRequest) error {
 	b := []byte{0x05, 0x00}
-	utils.Log.Debug("一次协商回复: ", b[0:2])
+	utils.Logger.Debug("一次协商回复: ", b[0:2])
 	_, err := conn.Write(b[0:2])
 	if err != nil {
 		return err
@@ -92,7 +92,7 @@ func parseSocksAddressRequest(conn *net.TCPConn) (*SocksAddressRequest, error) {
 			}
 		}
 		if n == 0 {
-			utils.Log.Error("error")
+			utils.Logger.Error("error")
 			return nil, errors.New("可能网络不通")
 		}
 
@@ -113,7 +113,7 @@ func parseSocksAddressRequest(conn *net.TCPConn) (*SocksAddressRequest, error) {
 	if socksAddressRequest.ATYP == 1 {
 		// IPv4
 		socksAddressRequest.DSTADDR = buf[4:8]
-		utils.Log.Debug("IPv4")
+		utils.Logger.Debug("IPv4")
 	} else if socksAddressRequest.ATYP == 3 {
 		// Domain
 		socksAddressRequest.DSTDOMAIN = string(buf[5 : n-2])
@@ -122,11 +122,11 @@ func parseSocksAddressRequest(conn *net.TCPConn) (*SocksAddressRequest, error) {
 			return nil, err
 		}
 		socksAddressRequest.DSTADDR = ipAddr.IP[len(ipAddr.IP)-4:]
-		utils.Log.Debug("Domain")
+		utils.Logger.Debug("Domain")
 	} else if socksAddressRequest.ATYP == 4 {
 		// IPv6
 		socksAddressRequest.DSTADDR = buf[4 : 4+net.IPv6len]
-		utils.Log.Debug("IPv6")
+		utils.Logger.Debug("IPv6")
 	}
 
 	socksAddressRequest.DSTPORT = binary.BigEndian.Uint16(buf[n-2 : n])
@@ -136,8 +136,8 @@ func parseSocksAddressRequest(conn *net.TCPConn) (*SocksAddressRequest, error) {
 		Port: int(socksAddressRequest.DSTPORT),
 	}
 
-	utils.Log.Debug("二次协商请求: ", socksAddressRequest)
-	utils.Log.Debug("客户端需要访问的服务器地址: ", socksAddressRequest.DSTADDR)
+	utils.Logger.Debug("二次协商请求: ", socksAddressRequest)
+	utils.Logger.Debug("客户端需要访问的服务器地址: ", socksAddressRequest.DSTADDR)
 	return &socksAddressRequest, nil
 }
 
@@ -162,7 +162,7 @@ func responseSocksAddressRequest(conn *net.TCPConn, socks *SocksAddressRequest) 
 	binary.BigEndian.PutUint16(b, socks.DSTPORT)
 	response = append(response, b[:2]...)
 
-	utils.Log.Debug("二次协商回复: ", response)
+	utils.Logger.Debug("二次协商回复: ", response)
 	conn.Write(response)
 
 	return nil
