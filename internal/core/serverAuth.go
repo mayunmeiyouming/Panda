@@ -116,6 +116,11 @@ func parseSocksAddressRequest(conn *net.TCPConn) (*SocksAddressRequest, error) {
 		utils.Logger.Debug("IPv4")
 	} else if socksAddressRequest.ATYP == 3 {
 		// Domain
+		l := int(buf[4])
+		if l + 7 != n {
+			return nil, errors.New("第二阶段请求包不完整")
+		}
+
 		socksAddressRequest.DSTDOMAIN = string(buf[5 : n-2])
 		ipAddr, err := net.ResolveIPAddr("ip", socksAddressRequest.DSTDOMAIN)
 		if err != nil {

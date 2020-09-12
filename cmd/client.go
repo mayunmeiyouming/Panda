@@ -19,7 +19,7 @@ var clientCmd = &cobra.Command{
 }
 
 func init() {
-	clientCmd.Flags().StringVar(&localePort, "localePort", "1080", "本地监听端口号，默认 1080")
+	clientCmd.Flags().StringVar(&localePort, "localePort", "2080", "本地监听端口号，默认 2080")
 	clientCmd.Flags().StringVar(&remotePort, "remotePort", "8080", "代理服务器端口号，默认 8080")
 	rootCmd.AddCommand(clientCmd)
 }
