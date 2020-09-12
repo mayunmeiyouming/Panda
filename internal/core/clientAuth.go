@@ -57,23 +57,7 @@ func RequestAddressAuth(client *net.TCPConn, dstServer *net.TCPConn, socksClient
 		return nil, err
 	}
 
-	// 从 http 中读取 client 请求地址
-	j := 0
-	z := 0
-	httpRequest := []string{}
-	for i := 0; i < n; i++ {
-		if buff[i] == 10 {
-			httpRequest = append(httpRequest, string(buff[j:i-1]))
-			j = i + 1
-			z++
-		}
-		if z == 2 {
-			break
-		}
-	}
-
 	// 解析 http 地址
-	// utils.Logger.Info("请求地址: ", httpRequest[1])
 	re := bytes.NewReader(buff[:n])
 	a := bufio.NewReader(re)
 	request, _ := http.ReadRequest(a)
