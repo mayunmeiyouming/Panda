@@ -57,6 +57,8 @@ func RequestAddressAuth(client *net.TCPConn, dstServer *net.TCPConn, socksClient
 		return nil, err
 	}
 
+	utils.Logger.Info("HTTP包: ", string(buff[:n]))
+
 	// 解析 http 地址
 	re := bytes.NewReader(buff[:n])
 	a := bufio.NewReader(re)

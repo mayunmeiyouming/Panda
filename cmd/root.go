@@ -31,7 +31,7 @@ func initResource()  {
 	utils.InitLogger()
 
 	if config.CONFIG.LoggerConfig.DebugMode {
-		utils.Logger.Warn("running on debug mode")
+		utils.Logger.Info("running on debug mode")
 	}
 }
 
