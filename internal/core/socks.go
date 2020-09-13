@@ -57,7 +57,7 @@ func SocksClient(client *net.TCPConn, dstServer *net.TCPConn) {
 	if err != nil {
 		return
 	}
-	
+
 	// 转发消息
 	if *port == 443 {
 		fmt.Fprint(client, "HTTP/1.1 200 Connection established\r\n")
@@ -67,8 +67,9 @@ func SocksClient(client *net.TCPConn, dstServer *net.TCPConn) {
 	
 	//进行转发
 	utils.Logger.Debug("数据转发中..........")
-	go io.Copy(dstServer, client)
-	SecureCopy(client, dstServer)
+	// SecureCopy(client, dstServer)
+	go io.Copy(client, dstServer)
+	io.Copy(dstServer, client)
 
 	utils.Logger.Info("代理成功")
 }
@@ -82,6 +83,7 @@ func SecureCopy(dst io.ReadWriteCloser, src io.Reader) (written int64, err error
 		utils.Logger.Debug("准备发送")
 		nr, er := src.Read(buf[:])
 		utils.Logger.Debug("发送长度: ", nr)
+		utils.Logger.Debug("代理数据: ", string(buf[:nr]))
 		if nr > 0 {
 			nw, ew := dst.Write(buf[0:nr])
 			utils.Logger.Debug("发送成功")
