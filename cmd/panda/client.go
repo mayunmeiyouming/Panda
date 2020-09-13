@@ -45,8 +45,6 @@ func handleProxyRequest(client *net.TCPConn, proxyServerAddr *net.TCPAddr) {
 		utils.Logger.Debug("连接 Proxy Server 错误!!!")
 		return
 	}
-	defer dstServer.Close()
-	defer client.Close()
 
 	core.SocksClient(client, dstServer)
 }

@@ -5,7 +5,6 @@ import (
 	"bufio"
 	"bytes"
 	"encoding/binary"
-	"errors"
 	"net"
 	"net/http"
 	"strconv"
@@ -16,6 +15,25 @@ import (
 type SocksClientAuthResponse struct {
 	VER    uint8
 	METHOD uint8
+}
+
+// SocksClientAuth 是协商认证阶段
+func SocksClientAuth(client *net.TCPConn, dstServer *net.TCPConn) (*[]byte, *int, error) {
+	// 第一阶段协议版本及认证方式
+	socksClientAuthResponse, err := RequestVersionAndMethodAuth(dstServer)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	// 第二阶段根据认证方式执行对应的认证，由于采用无密码格式，这里省略验证，返回第三阶段请求信息
+	// VER, CMD, RSV, ATYP, ADDR, PORT
+	res, port, err := RequestAddressAuth(client, dstServer, socksClientAuthResponse)
+	if err != nil {
+		utils.Logger.Error("第二阶段出错: ", err)
+		return nil, nil, err
+	}
+
+	return res, port, nil
 }
 
 // RequestVersionAndMethodAuth 是第一阶段协议版本及认证方式
@@ -48,13 +66,13 @@ func RequestVersionAndMethodAuth(dstServer *net.TCPConn) (*SocksClientAuthRespon
 	return &socksClientAuthResponse, nil
 }
 
-// RequestAddressAuth 第二阶段根据认证方式执行对应的认证
-func RequestAddressAuth(client *net.TCPConn, dstServer *net.TCPConn, socksClientAuthResponse *SocksClientAuthResponse) (*[]byte, error) {
+// RequestAddressAuth 第二阶段根据认证方式执行对应的认证，返回第三阶段请求信息
+func RequestAddressAuth(client *net.TCPConn, dstServer *net.TCPConn, socksClientAuthResponse *SocksClientAuthResponse) (*[]byte, *int, error) {
 	buff := make([]byte, 1024)
 	n, err := client.Read(buff)
 	if err != nil {
 		utils.Logger.Error(err)
-		return nil, err
+		return nil, nil, err
 	}
 
 	utils.Logger.Info("HTTP包: ", string(buff[:n]))
@@ -62,18 +80,16 @@ func RequestAddressAuth(client *net.TCPConn, dstServer *net.TCPConn, socksClient
 	// 解析 http 地址
 	re := bytes.NewReader(buff[:n])
 	a := bufio.NewReader(re)
-	request, _ := http.ReadRequest(a)
+	request, err := http.ReadRequest(a)
+	if err != nil {
+		return nil, nil, err
+	}
 	utils.Logger.Info("请求地址: ", request.Host)
 	dst := strings.Split(request.Host, ":")
 	var dstAddr = dst[0]
 	var dstPort = "80"
 	if len(dst) == 2 && dst[1] != "" {
 		dstPort = dst[1]
-	}
-
-	// 暂时只支持 HTTP
-	if dstPort != "80" {
-		return nil, errors.New("暂时只支持 HTTP")
 	}
 
 	// 暂时默认域名
@@ -92,21 +108,22 @@ func RequestAddressAuth(client *net.TCPConn, dstServer *net.TCPConn, socksClient
 	n, err = dstServer.Write(resp)
 	if err != nil {
 		utils.Logger.Debug(dstServer.RemoteAddr(), err)
-		return nil, err
+		return nil, nil, err
 	}
 
 	// 接收代理服务器返回的结果
 	n, err = dstServer.Read(resp[0:])
 	if err != nil {
 		utils.Logger.Debug(dstServer.RemoteAddr(), err)
-		return nil, err
+		return nil, nil, err
 	}
 	if resp[0] != 0x05 || resp[1] != 0x00 {
 		utils.Logger.Debug("第二阶段协商出错")
-		return nil, err
+		return nil, nil, err
 	}
+	utils.Logger.Debug("第二阶段协商成功")
 	utils.Logger.Debug("认证成功")
 
 	res := buff[:n]
-	return &res, nil
+	return &res, &r, nil
 }

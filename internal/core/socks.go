@@ -2,6 +2,7 @@ package core
 
 import (
 	"Panda/utils"
+	"fmt"
 	"io"
 	"net"
 	"sync"
@@ -28,53 +29,80 @@ func SocksServe(conn *net.TCPConn) {
 	// 本地的内容copy到远程端
 	go func() {
 		defer wg.Done()
-		io.Copy(destinationServer, conn)
+		SecureCopy(destinationServer, conn)
+		// io.Copy(destinationServer, conn)
 	}()
 
 	// 远程得到的内容copy到源地址
 	go func() {
 		defer wg.Done()
-		io.Copy(conn, destinationServer)
+		SecureCopy(conn, destinationServer)
+		// io.Copy(conn, destinationServer)
 	}()
 	wg.Wait()
-	conn.Close()
 
 	utils.Logger.Info("代理成功")
 }
 
 // SocksClient ...
 func SocksClient(client *net.TCPConn, dstServer *net.TCPConn) {
+	if client == nil || dstServer == nil {
+		return
+	}
+	defer dstServer.Close()
+	defer client.Close()
 
 	// socket5请求认证协商
-	// 第一阶段协议版本及认证方式
-	socksClientAuthResponse, err := RequestVersionAndMethodAuth(dstServer)
+	res, port, err := SocksClientAuth(client, dstServer)
 	if err != nil {
 		return
 	}
-
-	// 第二阶段根据认证方式执行对应的认证，由于采用无密码格式，这里省略验证
-	// 第三阶段请求信息
-	// VER, CMD, RSV, ATYP, ADDR, PORT
-	res, err := RequestAddressAuth(client, dstServer, socksClientAuthResponse)
-	if err != nil {
-		return
-	}
-
+	
 	// 转发消息
-	wg := new(sync.WaitGroup)
-	wg.Add(2)
-	go func() {
-		defer wg.Done()
-		n, _ := dstServer.Write(*res)
-		if n > 0 {
-			utils.Logger.Info("发送成功")
+	if *port == 443 {
+		fmt.Fprint(client, "HTTP/1.1 200 Connection established\r\n")
+	} else {
+		dstServer.Write(*res)
+	} 
+	
+	//进行转发
+	utils.Logger.Debug("数据转发中..........")
+	go io.Copy(dstServer, client)
+	SecureCopy(client, dstServer)
+
+	utils.Logger.Info("代理成功")
+}
+
+// SecureCopy ...
+func SecureCopy(dst io.ReadWriteCloser, src io.Reader) (written int64, err error) {
+	size := 1024
+	buf := make([]byte, size)
+
+	for {
+		utils.Logger.Debug("准备发送")
+		nr, er := src.Read(buf[:])
+		utils.Logger.Debug("发送长度: ", nr)
+		if nr > 0 {
+			nw, ew := dst.Write(buf[0:nr])
+			utils.Logger.Debug("发送成功")
+			if nw > 0 {
+				written += int64(nw)
+			}
+			if ew != nil {
+				err = ew
+				break
+			}
+			if nr != nw {
+				err = io.ErrShortWrite
+				break
+			}
 		}
-	}()
-
-	go func() {
-		defer wg.Done()
-		io.Copy(client, dstServer)
-	}()
-
-	wg.Wait()
+		if er != nil {
+			if er != io.EOF {
+				err = er
+			}
+			break
+		}
+	}
+	return written, err
 }
