@@ -125,6 +125,6 @@ func RequestAddressAuth(client *net.TCPConn, dstServer *net.TCPConn, socksClient
 	utils.Logger.Debug("第二阶段协商成功")
 	utils.Logger.Debug("认证成功")
 
-	res := buff[:n]
-	return &res, &r, nil
+	// res := buff[:n]
+	return &buff, &r, nil
 }
