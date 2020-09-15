@@ -60,16 +60,17 @@ func SocksClient(client *net.TCPConn, dstServer *net.TCPConn) {
 
 	// 转发消息
 	if *port == 443 {
-		fmt.Fprint(client, "HTTP/1.1 200 Connection established\r\n")
+		fmt.Fprint(client, "HTTP/1.1 200 Connection established\r\n\r\n")
 	} else {
 		dstServer.Write(*res)
 	} 
 	
 	//进行转发
 	utils.Logger.Debug("数据转发中..........")
-	// SecureCopy(client, dstServer)
-	go io.Copy(client, dstServer)
-	io.Copy(dstServer, client)
+	go SecureCopy(client, dstServer)
+	SecureCopy(dstServer, client)
+	// go io.Copy(client, dstServer)
+	// io.Copy(dstServer, client)
 
 	utils.Logger.Info("代理成功")
 }

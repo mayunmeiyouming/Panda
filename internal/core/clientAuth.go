@@ -82,6 +82,7 @@ func RequestAddressAuth(client *net.TCPConn, dstServer *net.TCPConn, socksClient
 	a := bufio.NewReader(re)
 	request, err := http.ReadRequest(a)
 	if err != nil {
+		utils.Logger.Info("HTTP 包有错误")
 		return nil, nil, err
 	}
 	utils.Logger.Info("请求地址: ", request.Host)
