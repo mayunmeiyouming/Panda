@@ -69,12 +69,11 @@ func SocksClient(client *net.TCPConn, dstServer *net.TCPConn) {
 	
 	//进行转发
 	utils.Logger.Debug("数据转发中..........")
-	// go SecureCopy(dstServer, client)
-	// SecureCopy(client, dstServer)
+	go SecureCopy(dstServer, client)
+	SecureCopy(client, dstServer)
 	
-	go io.Copy(dstServer, client)
-	io.Copy(client, dstServer)
-	
+	// go io.Copy(dstServer, client)
+	// io.Copy(client, dstServer)
 
 	utils.Logger.Info("代理成功")
 }
