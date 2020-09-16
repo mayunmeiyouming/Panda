@@ -83,14 +83,13 @@ func SecureCopy(dst io.ReadWriteCloser, src io.Reader) (written int64, err error
 	buf := make([]byte, size)
 
 	for {
-		utils.Logger.Debug("准备发送")
+		// utils.Logger.Debug("准备发送")
 		nr, er := src.Read(buf)
-		utils.Logger.Debug("发送长度: ", nr)
-		
+		// utils.Logger.Debug("发送长度: ", nr)
 		// utils.Logger.Debug("代理数据: ", string(buf[:nr]))
 		if nr > 0 {
 			nw, ew := dst.Write(buf[0:nr])
-			utils.Logger.Debug("发送成功")
+			// utils.Logger.Debug("发送成功")
 
 			if nr >= size && size <= 204800 {
 				size = size * 2
