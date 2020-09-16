@@ -79,7 +79,7 @@ func responseAuth(conn *net.TCPConn, socks *SocksAuthRequest) error {
 }
 
 func parseSocksAddressRequest(conn *net.TCPConn) (*SocksAddressRequest, error) {
-	buf := make([]byte, 1024)
+	buf := make([]byte, 2048)
 	n, _ := conn.Read(buf[0:])
 
 	// 解决网络延时问题

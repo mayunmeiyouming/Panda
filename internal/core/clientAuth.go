@@ -68,14 +68,14 @@ func RequestVersionAndMethodAuth(dstServer *net.TCPConn) (*SocksClientAuthRespon
 
 // RequestAddressAuth 第二阶段根据认证方式执行对应的认证，返回第三阶段请求信息
 func RequestAddressAuth(client *net.TCPConn, dstServer *net.TCPConn, socksClientAuthResponse *SocksClientAuthResponse) (*[]byte, *int, error) {
-	buff := make([]byte, 1024)
+	buff := make([]byte, 2048)
 	n, err := client.Read(buff)
 	if err != nil {
 		utils.Logger.Error(err)
 		return nil, nil, err
 	}
 
-	utils.Logger.Info("HTTP包: ", string(buff[:n]))
+	// utils.Logger.Info("HTTP包: ", string(buff[:n]))
 
 	// 解析 http 地址
 	re := bytes.NewReader(buff[:n])
