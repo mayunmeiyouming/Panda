@@ -70,12 +70,7 @@ func RequestVersionAndMethodAuth(dstServer *net.TCPConn) (*SocksClientAuthRespon
 // RequestAddressAuth 第二阶段根据认证方式执行对应的认证，返回第三阶段请求信息
 func RequestAddressAuth(client *net.TCPConn, dstServer *net.TCPConn, socksClientAuthResponse *SocksClientAuthResponse) (*[]byte, *int, error) {
 	buff := make([]byte, 10240)
-
-	// 有bug，不一定能读取完整的http包
-	// n, err := client.Read(buff)
-	// if err != nil {
-	// 	return nil, nil, err
-	// }
+	
 	n := 0
 	reader := bufio.NewReader(client)
 	for {
