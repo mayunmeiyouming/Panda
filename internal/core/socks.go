@@ -30,14 +30,12 @@ func SocksServe(conn *net.TCPConn) {
 	go func() {
 		defer wg.Done()
 		SecureCopy(destinationServer, conn)
-		// io.Copy(destinationServer, conn)
 	}()
 
 	// 远程得到的内容copy到源地址
 	go func() {
 		defer wg.Done()
 		SecureCopy(conn, destinationServer)
-		// io.Copy(conn, destinationServer)
 	}()
 	wg.Wait()
 
@@ -70,9 +68,6 @@ func SocksClient(client *net.TCPConn, dstServer *net.TCPConn) {
 	utils.Logger.Debug("数据转发中..........")
 	go SecureCopy(dstServer, client)
 	SecureCopy(client, dstServer)
-	
-	// go io.Copy(dstServer, client)
-	// io.Copy(client, dstServer)
 
 	utils.Logger.Info("代理成功")
 }
