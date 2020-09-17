@@ -91,6 +91,7 @@ func SecureCopy(dst io.ReadWriteCloser, src io.Reader) (written int64, err error
 			nw, ew := dst.Write(buf[0:nr])
 			// utils.Logger.Debug("发送成功")
 
+			// 动态拓展切片长度
 			if nr >= size && size <= 204800 {
 				size = size * 2
 				buf = make([]byte, size)

@@ -5,6 +5,7 @@ import (
 	"bufio"
 	"bytes"
 	"encoding/binary"
+	"io"
 	"net"
 	"net/http"
 	"strconv"
@@ -71,13 +72,29 @@ func RequestAddressAuth(client *net.TCPConn, dstServer *net.TCPConn, socksClient
 	buff := make([]byte, 10240)
 
 	// 有bug，不一定能读取完整的http包
-	n, err := client.Read(buff)
-	if err != nil {
-		utils.Logger.Error(err)
-		return nil, nil, err
+	// n, err := client.Read(buff)
+	// if err != nil {
+	// 	return nil, nil, err
+	// }
+	n := 0
+	reader := bufio.NewReader(client)
+	for {
+		temp, err := reader.ReadBytes('\n')
+		if err == io.EOF {
+			break
+		}
+		if err != nil {
+			return nil, nil, err
+		}
+		buff = append(buff[:n], temp[:len(temp)]...)
+		n += len(temp)
+
+		if len(temp) == 2 {
+			break
+		}
 	}
 
-	// utils.Logger.Info("HTTP包: ", string(buff[:n]))
+	utils.Logger.Info("HTTP包: ", string(buff[:n]))
 
 	// 解析 http 地址
 	re := bytes.NewReader(buff[:n])
