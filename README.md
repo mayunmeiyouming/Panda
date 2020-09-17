@@ -1,6 +1,10 @@
 # Panda
 Panda 是一个由 Golang 实现的代理服务器
 
+# TODO
+
+method: 0x02 用户认证
+
 # HTTP GET
 
 ```
