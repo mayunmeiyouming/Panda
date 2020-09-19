@@ -41,7 +41,7 @@ func SocksClientAuth(client *net.TCPConn, dstServer *net.TCPConn) (*[]byte, *int
 func RequestVersionAndMethodAuth(dstServer *net.TCPConn) (*SocksClientAuthResponse, error) {
 	dstServer.Write([]byte{0x05, 0x01, 0x00})
 
-	resp := make([]byte, 1024)
+	resp := make([]byte, 2)
 	n, err := dstServer.Read(resp)
 	if err != nil {
 		utils.Logger.Error(err)

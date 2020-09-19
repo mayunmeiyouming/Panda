@@ -51,7 +51,7 @@ func SocksAuth(conn *net.TCPConn) (*SocksAddressRequest, error) {
 }
 
 func parseSocksAuthRequest(conn *net.TCPConn) (*SocksAuthRequest, error) {
-	b := make([]byte, 1024)
+	b := make([]byte, 257)
 	n, err := conn.Read(b)
 
 	if n >= 3 {
