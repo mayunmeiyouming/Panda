@@ -5,6 +5,7 @@ import (
 	"bufio"
 	"bytes"
 	"encoding/binary"
+	"errors"
 	"io"
 	"net"
 	"net/http"
@@ -70,7 +71,7 @@ func RequestVersionAndMethodAuth(dstServer *net.TCPConn) (*SocksClientAuthRespon
 // RequestAddressAuth 第二阶段根据认证方式执行对应的认证，返回第三阶段请求信息
 func RequestAddressAuth(client *net.TCPConn, dstServer *net.TCPConn, socksClientAuthResponse *SocksClientAuthResponse) (*[]byte, *int, error) {
 	buff := make([]byte, 10240)
-	
+
 	n := 0
 	reader := bufio.NewReader(client)
 	for {
@@ -127,18 +128,37 @@ func RequestAddressAuth(client *net.TCPConn, dstServer *net.TCPConn, socksClient
 	}
 
 	// 接收代理服务器返回的结果
-	n, err = dstServer.Read(resp[0:])
+	_, err = parseAddressResponse(dstServer)
 	if err != nil {
-		utils.Logger.Debug(dstServer.RemoteAddr(), err)
 		return nil, nil, err
 	}
-	if resp[0] != 0x05 || resp[1] != 0x00 {
+
+	return &buff, &r, nil
+}
+
+func parseAddressResponse(server *net.TCPConn) (*int, error) {
+	resp := make([]byte, 2048)
+	n, err := server.Read(resp[:])
+	if err != nil {
+		utils.Logger.Debug(server.RemoteAddr(), err)
+		return nil, err
+	}
+
+	// 协议版本
+	if resp[0] != 0x05 {
 		utils.Logger.Debug("第二阶段协商出错")
-		return nil, nil, err
+		return nil, err
 	}
+
+	// 状态码
+	if resp[1] != 0x00 {
+		errMsg := "第二阶段协商出错，状态码: " + string(resp[1])
+		utils.Logger.Debug(errMsg)
+		return nil, errors.New(errMsg)
+	}
+
 	utils.Logger.Debug("第二阶段协商成功")
 	utils.Logger.Debug("认证成功")
 
-	// res := buff[:n]
-	return &buff, &r, nil
+	return &n, nil
 }

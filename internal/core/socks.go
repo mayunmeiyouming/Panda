@@ -74,7 +74,7 @@ func SocksClient(client *net.TCPConn, dstServer *net.TCPConn) {
 
 // SecureCopy ...
 func SecureCopy(dst io.ReadWriteCloser, src io.Reader) (written int64, err error) {
-	size := 10240
+	size := 20480
 	buf := make([]byte, size)
 
 	for {
@@ -87,7 +87,7 @@ func SecureCopy(dst io.ReadWriteCloser, src io.Reader) (written int64, err error
 			// utils.Logger.Debug("发送成功")
 
 			// 动态拓展切片长度
-			if nr >= size && size <= 204800 {
+			if nr * 2 >= size && size <= 408600 {
 				size = size * 2
 				buf = make([]byte, size)
 			}

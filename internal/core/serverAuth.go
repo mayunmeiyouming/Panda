@@ -50,6 +50,7 @@ func SocksAuth(conn *net.TCPConn) (*SocksAddressRequest, error) {
 	return socksAddressRequest, nil
 }
 
+// 第一阶段协商，解析 client 的包
 func parseSocksAuthRequest(conn *net.TCPConn) (*SocksAuthRequest, error) {
 	b := make([]byte, 257)
 	n, err := conn.Read(b)
@@ -78,6 +79,7 @@ func responseAuth(conn *net.TCPConn, socks *SocksAuthRequest) error {
 	return nil
 }
 
+// 解析第二阶段协商的 client 的包
 func parseSocksAddressRequest(conn *net.TCPConn) (*SocksAddressRequest, error) {
 	buf := make([]byte, 2048)
 	n, _ := conn.Read(buf[0:])
@@ -163,7 +165,7 @@ func responseSocksAddressRequest(conn *net.TCPConn, socks *SocksAddressRequest) 
 		response = append(response, socks.DSTADDR...)
 	}
 
-	b := []byte{0, 0}
+	b := []byte{0, 0} // 初始化
 	binary.BigEndian.PutUint16(b, socks.DSTPORT)
 	response = append(response, b[:2]...)
 
