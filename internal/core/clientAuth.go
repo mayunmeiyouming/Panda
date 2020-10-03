@@ -20,9 +20,9 @@ type SocksClientAuthResponse struct {
 }
 
 // SocksClientAuth 是协商认证阶段
-func SocksClientAuth(client *net.TCPConn, dstServer *net.TCPConn) (*[]byte, *int, error) {
+func SocksClientAuth(client *net.TCPConn, dstServer *net.TCPConn, method byte) (*[]byte, *int, error) {
 	// 第一阶段协议版本及认证方式
-	socksClientAuthResponse, err := RequestVersionAndMethodAuth(dstServer)
+	socksClientAuthResponse, err := RequestVersionAndMethodAuth(dstServer, method)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -39,8 +39,10 @@ func SocksClientAuth(client *net.TCPConn, dstServer *net.TCPConn) (*[]byte, *int
 }
 
 // RequestVersionAndMethodAuth 是第一阶段协议版本及认证方式
-func RequestVersionAndMethodAuth(dstServer *net.TCPConn) (*SocksClientAuthResponse, error) {
-	dstServer.Write([]byte{0x05, 0x01, 0x00})
+func RequestVersionAndMethodAuth(dstServer *net.TCPConn, method byte) (*SocksClientAuthResponse, error) {
+	authRequest := []byte{0x05, 0x01}
+	authRequest = append(authRequest, method)
+	dstServer.Write(authRequest)
 
 	resp := make([]byte, 2)
 	n, err := dstServer.Read(resp)

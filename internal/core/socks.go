@@ -26,16 +26,19 @@ func SocksServe(conn *net.TCPConn) {
 	wg := new(sync.WaitGroup)
 	wg.Add(2)
 
+	dstCrypto := NoCrpt{}
+	clientCrypto := NoCrpt{}
+
 	// 本地的内容copy到远程端
 	go func() {
 		defer wg.Done()
-		SecureCopy(destinationServer, conn)
+		SecureCopy(destinationServer, dstCrypto, conn, clientCrypto)
 	}()
 
 	// 远程得到的内容copy到源地址
 	go func() {
 		defer wg.Done()
-		SecureCopy(conn, destinationServer)
+		SecureCopy(conn, clientCrypto, destinationServer, dstCrypto)
 	}()
 	wg.Wait()
 
@@ -43,7 +46,7 @@ func SocksServe(conn *net.TCPConn) {
 }
 
 // SocksClient ...
-func SocksClient(client *net.TCPConn, dstServer *net.TCPConn) {
+func SocksClient(client *net.TCPConn, dstServer *net.TCPConn, method byte) {
 	if client == nil || dstServer == nil {
 		return
 	}
@@ -51,39 +54,45 @@ func SocksClient(client *net.TCPConn, dstServer *net.TCPConn) {
 	defer client.Close()
 
 	// socket5请求认证协商
-	res, port, err := SocksClientAuth(client, dstServer)
+	res, port, err := SocksClientAuth(client, dstServer, method)
 	if err != nil {
 		return
 	}
+
+	dstCrypto := NoCrpt{}
+	clientCrypto := NoCrpt{}
 
 	// 转发消息
 	if *port == 443 {
 		fmt.Fprint(client, "HTTP/1.1 200 Connection established\r\n\r\n")
 	} else {
-		dstServer.Write(*res)
+		dstServer.Write(dstCrypto.Encrypt(*res))
 		utils.Logger.Debug("HTTP发送成功")
 	} 
 	
 	//进行转发
 	utils.Logger.Debug("数据转发中..........")
-	go SecureCopy(dstServer, client)
-	SecureCopy(client, dstServer)
+	
+	go SecureCopy(dstServer, dstCrypto, client, clientCrypto)
+	SecureCopy(client, clientCrypto, dstServer, dstCrypto)
 
 	utils.Logger.Info("代理成功")
 }
 
 // SecureCopy ...
-func SecureCopy(dst io.ReadWriteCloser, src io.Reader) (written int64, err error) {
+func SecureCopy(dst io.ReadWriter, dstCrypto Crypto, src io.ReadWriter, srcCrypto Crypto) (written int64, err error) {
 	size := 20480
 	buf := make([]byte, size)
 
 	for {
 		// utils.Logger.Debug("准备发送")
-		nr, er := src.Read(buf)
+		nr, er := srcCrypto.DecodeRead(src, buf)
+		// nr, er := src.Read(buf)
 		// utils.Logger.Debug("发送长度: ", nr)
 		// utils.Logger.Debug("代理数据: ", string(buf[:nr]))
 		if nr > 0 {
-			nw, ew := dst.Write(buf[0:nr])
+			nw, ew := dstCrypto.EncodeWrite(dst, buf[0:nr])
+			// nw, ew := dst.Write(buf[0:nr])
 			// utils.Logger.Debug("发送成功")
 
 			// 动态拓展切片长度

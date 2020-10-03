@@ -7,7 +7,7 @@ import (
 )
 
 // Client 是 Panda 的 Client 模式的实际入口
-func Client(localePort string, remotePort string) {
+func Client(localePort string, remotePort string, method int) {
 
 	// proxy server 地址
 	proxyServerAddr, err := net.ResolveTCPAddr("tcp", ":"+remotePort)
@@ -33,11 +33,11 @@ func Client(localePort string, remotePort string) {
 		if err != nil {
 			utils.Logger.Error(err)
 		}
-		go handleProxyRequest(client, proxyServerAddr)
+		go handleProxyRequest(client, proxyServerAddr, toMethod(method))
 	}
 }
 
-func handleProxyRequest(client *net.TCPConn, proxyServerAddr *net.TCPAddr) {
+func handleProxyRequest(client *net.TCPConn, proxyServerAddr *net.TCPAddr, method byte) {
 
 	// 连接 Proxy Server
 	dstServer, err := net.DialTCP("tcp", nil, proxyServerAddr)
@@ -46,5 +46,19 @@ func handleProxyRequest(client *net.TCPConn, proxyServerAddr *net.TCPAddr) {
 		return
 	}
 
-	core.SocksClient(client, dstServer)
+	core.SocksClient(client, dstServer, method)
+}
+
+func toMethod(method int) byte {
+	var res byte
+	switch method {
+	case 0:
+		res = 0x00
+	case 1:
+		res = 0x80
+	default:
+		utils.Logger.Fatal("请选择正确的加密方式")
+	}
+
+	return res
 }
