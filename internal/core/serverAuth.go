@@ -12,7 +12,7 @@ import (
 type SocksAuthRequest struct {
 	VERSION  int32
 	NMETHODS int32
-	METHODS  int32
+	METHODS  []byte
 }
 
 // SocksAddressRequest 是客户端告诉服务端目标地址的请求
@@ -28,26 +28,26 @@ type SocksAddressRequest struct {
 }
 
 // SocksAuth 是协商认证阶段
-func SocksAuth(conn *net.TCPConn) (*SocksAddressRequest, error) {
+func SocksAuth(conn *net.TCPConn) (*SocksAddressRequest, *byte, error) {
 	// 协商认证方法
 	socksAuthRequest, err := parseSocksAuthRequest(conn)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	err = responseAuth(conn, socksAuthRequest)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	// 获取代理地址
 	socksAddressRequest, err := parseSocksAddressRequest(conn)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	// 服务端回复
 	responseSocksAddressRequest(conn, socksAddressRequest)
 
-	return socksAddressRequest, nil
+	return socksAddressRequest, &socksAuthRequest.METHODS[0], nil
 }
 
 // 第一阶段协商，解析 client 的包
@@ -59,7 +59,7 @@ func parseSocksAuthRequest(conn *net.TCPConn) (*SocksAuthRequest, error) {
 		socksAuthRequest := &SocksAuthRequest{
 			VERSION:  int32(b[0]),
 			NMETHODS: int32(b[1]),
-			METHODS:  int32(b[2]),
+			METHODS:  b[2:n],
 		}
 		utils.Logger.Debug("一次协商请求: ", socksAuthRequest)
 		return socksAuthRequest, nil

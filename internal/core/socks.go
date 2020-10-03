@@ -11,7 +11,7 @@ import (
 // SocksServe ...
 func SocksServe(conn *net.TCPConn) {
 	// 协商阶段
-	socksAddressRequest, err := SocksAuth(conn)
+	socksAddressRequest, method, err := SocksAuth(conn)
 	if err != nil {
 		return
 	}
@@ -27,18 +27,18 @@ func SocksServe(conn *net.TCPConn) {
 	wg.Add(2)
 
 	dstCrypto := NoCrpt{}
-	clientCrypto := NoCrpt{}
+	connCrypto := getCrypt(*method)
 
 	// 本地的内容copy到远程端
 	go func() {
 		defer wg.Done()
-		SecureCopy(destinationServer, dstCrypto, conn, clientCrypto)
+		SecureCopy(destinationServer, dstCrypto, conn, connCrypto)
 	}()
 
 	// 远程得到的内容copy到源地址
 	go func() {
 		defer wg.Done()
-		SecureCopy(conn, clientCrypto, destinationServer, dstCrypto)
+		SecureCopy(conn, connCrypto, destinationServer, dstCrypto)
 	}()
 	wg.Wait()
 
@@ -59,7 +59,7 @@ func SocksClient(client *net.TCPConn, dstServer *net.TCPConn, method byte) {
 		return
 	}
 
-	dstCrypto := NoCrpt{}
+	dstCrypto := getCrypt(method)
 	clientCrypto := NoCrpt{}
 
 	// 转发消息
@@ -68,11 +68,11 @@ func SocksClient(client *net.TCPConn, dstServer *net.TCPConn, method byte) {
 	} else {
 		dstServer.Write(dstCrypto.Encrypt(*res))
 		utils.Logger.Debug("HTTP发送成功")
-	} 
-	
+	}
+
 	//进行转发
 	utils.Logger.Debug("数据转发中..........")
-	
+
 	go SecureCopy(dstServer, dstCrypto, client, clientCrypto)
 	SecureCopy(client, clientCrypto, dstServer, dstCrypto)
 
@@ -96,7 +96,7 @@ func SecureCopy(dst io.ReadWriter, dstCrypto Crypto, src io.ReadWriter, srcCrypt
 			// utils.Logger.Debug("发送成功")
 
 			// 动态拓展切片长度
-			if nr * 2 >= size && size <= 408600 {
+			if nr*2 >= size && size <= 408600 {
 				size = size * 2
 				buf = make([]byte, size)
 			}

@@ -1,6 +1,7 @@
 package core
 
 import (
+	"Panda/utils"
 	"crypto/aes"
 	"crypto/cipher"
 	"fmt"
@@ -14,6 +15,20 @@ type Crypto interface {
 	Decrypt([]byte) []byte
 	EncodeWrite(io.ReadWriter, []byte) (int, error)
 	DecodeRead(io.ReadWriter, []byte) (int, error)
+}
+
+func getCrypt(method byte) Crypto {
+	var res Crypto
+	switch method {
+	case 0x00:
+		res = NoCrpt{}
+	case 0x80:
+		res = AES256{}
+	default:
+		utils.Logger.Fatal("不支持该加密方式")
+	}
+
+	return res
 }
 
 // NoCrpt ...
