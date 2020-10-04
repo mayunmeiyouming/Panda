@@ -1,15 +1,33 @@
 package panda
 
 import (
-	"Panda/internal/core"
+	"Panda/pkg/core"
 	"Panda/utils"
 	"net"
+	"os"
+	"os/signal"
+	"syscall"
 )
 
 // Server 是 Panda 的 Server 模式的实际入口
-func Server(port string) {
+func Server(addr string, tcp bool, cipher string, password string) {
+	ciph, err := core.PickCipher(cipher, password)
+	if err != nil {
+		utils.Logger.Fatal(err)
+	}
 
-	listenAddr, err := net.ResolveTCPAddr("tcp", ":"+port)
+	if tcp {
+		utils.Logger.Info("开启 TCP Listen")
+		go tcpRemote(addr, ciph.StreamConn)
+	}
+
+	sigCh := make(chan os.Signal, 1)
+	signal.Notify(sigCh, syscall.SIGINT, syscall.SIGTERM)
+	<-sigCh
+}
+
+func tcpRemote(addr string, shadow func(net.Conn) net.Conn) {
+	listenAddr, err := net.ResolveTCPAddr("tcp", addr)
 	l, err := net.ListenTCP("tcp", listenAddr)
 	if err != nil {
 		utils.Logger.Fatal("监听端口失败，端口可能被占用")
@@ -22,14 +40,11 @@ func Server(port string) {
 			utils.Logger.Error(err)
 		}
 		utils.Logger.Debug("正在处理请求中")
-		go handleClientRequest(client)
-	}
-}
+		go func() {
+			defer client.Close()
 
-func handleClientRequest(client *net.TCPConn) {
-	if client == nil {
-		return
+			sc := shadow(client)
+			core.SocksServe(sc)
+		}()
 	}
-	defer client.Close()
-	core.SocksServe(client)
 }

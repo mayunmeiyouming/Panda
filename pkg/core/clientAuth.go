@@ -20,9 +20,9 @@ type SocksClientAuthResponse struct {
 }
 
 // SocksClientAuth 是协商认证阶段
-func SocksClientAuth(client *net.TCPConn, dstServer *net.TCPConn, method byte) (*[]byte, *int, error) {
+func SocksClientAuth(client *net.TCPConn, dstServer net.Conn) (*[]byte, *int, error) {
 	// 第一阶段协议版本及认证方式
-	socksClientAuthResponse, err := RequestVersionAndMethodAuth(dstServer, method)
+	socksClientAuthResponse, err := RequestVersionAndMethodAuth(dstServer)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -39,9 +39,9 @@ func SocksClientAuth(client *net.TCPConn, dstServer *net.TCPConn, method byte) (
 }
 
 // RequestVersionAndMethodAuth 是第一阶段协议版本及认证方式
-func RequestVersionAndMethodAuth(dstServer *net.TCPConn, method byte) (*SocksClientAuthResponse, error) {
+func RequestVersionAndMethodAuth(dstServer net.Conn) (*SocksClientAuthResponse, error) {
 	authRequest := []byte{0x05, 0x01}
-	authRequest = append(authRequest, method)
+	authRequest = append(authRequest, 0x00)
 	dstServer.Write(authRequest)
 
 	resp := make([]byte, 2)
@@ -71,10 +71,10 @@ func RequestVersionAndMethodAuth(dstServer *net.TCPConn, method byte) (*SocksCli
 }
 
 // RequestAddressAuth 第二阶段根据认证方式执行对应的认证，返回第三阶段请求信息
-func RequestAddressAuth(client *net.TCPConn, dstServer *net.TCPConn, socksClientAuthResponse *SocksClientAuthResponse) (*[]byte, *int, error) {
-	buff := make([]byte, 0)
+func RequestAddressAuth(client *net.TCPConn, dstServer net.Conn, socksClientAuthResponse *SocksClientAuthResponse) (*[]byte, *int, error) {
+	buff := make([]byte, 0, 2048)
 
-	n := 0
+	// n := 0
 	reader := bufio.NewReader(client)
 	for {
 		temp, err := reader.ReadBytes('\n')
@@ -84,18 +84,19 @@ func RequestAddressAuth(client *net.TCPConn, dstServer *net.TCPConn, socksClient
 		if err != nil {
 			return nil, nil, err
 		}
-		buff = append(buff[:n], temp[:len(temp)]...)
-		n += len(temp)
+
+		buff = append(buff[:len(buff)], temp[:len(temp)]...)
+		// n += len(temp)
 
 		if len(temp) == 2 {
 			break
 		}
 	}
 
-	utils.Logger.Info("HTTP包: ", string(buff[:n]))
+	utils.Logger.Info("HTTP包: ", string(buff[:len(buff)]))
 
 	// 解析 http 地址
-	re := bytes.NewReader(buff[:n])
+	re := bytes.NewReader(buff[:len(buff)])
 	a := bufio.NewReader(re)
 	request, err := http.ReadRequest(a)
 	if err != nil {
@@ -123,7 +124,7 @@ func RequestAddressAuth(client *net.TCPConn, dstServer *net.TCPConn, socksClient
 	resp = append(resp, b[:2]...)
 
 	// 发送地址给 Proxy Server
-	n, err = dstServer.Write(resp)
+	_, err = dstServer.Write(resp)
 	if err != nil {
 		utils.Logger.Debug(dstServer.RemoteAddr(), err)
 		return nil, nil, err
@@ -138,7 +139,7 @@ func RequestAddressAuth(client *net.TCPConn, dstServer *net.TCPConn, socksClient
 	return &buff, &r, nil
 }
 
-func parseAddressResponse(server *net.TCPConn) (*int, error) {
+func parseAddressResponse(server net.Conn) (*int, error) {
 	resp := make([]byte, 2048)
 	n, err := server.Read(resp[:])
 	if err != nil {

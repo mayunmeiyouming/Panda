@@ -28,7 +28,7 @@ type SocksAddressRequest struct {
 }
 
 // SocksAuth 是协商认证阶段
-func SocksAuth(conn *net.TCPConn) (*SocksAddressRequest, *byte, error) {
+func SocksAuth(conn net.Conn) (*SocksAddressRequest, *byte, error) {
 	// 协商认证方法
 	socksAuthRequest, err := parseSocksAuthRequest(conn)
 	if err != nil {
@@ -51,7 +51,7 @@ func SocksAuth(conn *net.TCPConn) (*SocksAddressRequest, *byte, error) {
 }
 
 // 第一阶段协商，解析 client 的包
-func parseSocksAuthRequest(conn *net.TCPConn) (*SocksAuthRequest, error) {
+func parseSocksAuthRequest(conn net.Conn) (*SocksAuthRequest, error) {
 	b := make([]byte, 257)
 	n, err := conn.Read(b)
 
@@ -69,7 +69,7 @@ func parseSocksAuthRequest(conn *net.TCPConn) (*SocksAuthRequest, error) {
 	return nil, err
 }
 
-func responseAuth(conn *net.TCPConn, socks *SocksAuthRequest) error {
+func responseAuth(conn net.Conn, socks *SocksAuthRequest) error {
 	b := []byte{0x05, 0x00}
 	utils.Logger.Debug("一次协商回复: ", b[0:2])
 	_, err := conn.Write(b[0:2])
@@ -80,7 +80,7 @@ func responseAuth(conn *net.TCPConn, socks *SocksAuthRequest) error {
 }
 
 // 解析第二阶段协商的 client 的包
-func parseSocksAddressRequest(conn *net.TCPConn) (*SocksAddressRequest, error) {
+func parseSocksAddressRequest(conn net.Conn) (*SocksAddressRequest, error) {
 	buf := make([]byte, 2048)
 	n, _ := conn.Read(buf[0:])
 
@@ -148,7 +148,7 @@ func parseSocksAddressRequest(conn *net.TCPConn) (*SocksAddressRequest, error) {
 	return &socksAddressRequest, nil
 }
 
-func responseSocksAddressRequest(conn *net.TCPConn, socks *SocksAddressRequest) error {
+func responseSocksAddressRequest(conn net.Conn, socks *SocksAddressRequest) error {
 	response := []byte{0x05, 0x00, 0x00}
 
 	response = append(response, socks.ATYP)

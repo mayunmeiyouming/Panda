@@ -1,31 +1,46 @@
 package panda
 
 import (
-	"Panda/internal/core"
+	"Panda/pkg/core"
 	"Panda/utils"
 	"net"
+	"os"
+	"os/signal"
+	"syscall"
 )
 
 // Client 是 Panda 的 Client 模式的实际入口
-func Client(localePort string, remotePort string, method int) {
+func Client(localAddr string, remoteAddr string, cipher string, password string) {
+	go socksLocal(localAddr, remoteAddr, cipher, password)
 
+	sigCh := make(chan os.Signal, 1)
+	signal.Notify(sigCh, syscall.SIGINT, syscall.SIGTERM)
+	<-sigCh
+}
+
+func socksLocal(localAddr string, remoteAddr string, cipher string, password string) {
 	// proxy server 地址
-	proxyServerAddr, err := net.ResolveTCPAddr("tcp", ":"+remotePort)
+	proxyServerAddr, err := net.ResolveTCPAddr("tcp", remoteAddr)
 	if err != nil {
 		utils.Logger.Error(err)
 	}
-	utils.Logger.Debug("连接远程服务器: ", remotePort+"....")
+	utils.Logger.Debug("连接远程服务器: ", remoteAddr+"....")
 
 	// 监听本地
-	listenAddr, err := net.ResolveTCPAddr("tcp", ":"+localePort)
+	listenAddr, err := net.ResolveTCPAddr("tcp", localAddr)
 	if err != nil {
 		utils.Logger.Error(err)
 	}
-	utils.Logger.Debug("监听本地端口: ", localePort)
+	utils.Logger.Debug("监听本地端口: ", localAddr)
 
 	listener, err := net.ListenTCP("tcp", listenAddr)
 	if err != nil {
 		utils.Logger.Error(err)
+	}
+
+	ciph, err := core.PickCipher(cipher, password)
+	if err != nil {
+		utils.Logger.Fatal(err)
 	}
 
 	for {
@@ -33,20 +48,24 @@ func Client(localePort string, remotePort string, method int) {
 		if err != nil {
 			utils.Logger.Error(err)
 		}
-		go handleProxyRequest(client, proxyServerAddr, toMethod(method))
+		defer client.Close()
+
+		go handleProxyRequest(client, proxyServerAddr, ciph.StreamConn)
 	}
 }
 
-func handleProxyRequest(client *net.TCPConn, proxyServerAddr *net.TCPAddr, method byte) {
+func handleProxyRequest(client *net.TCPConn, proxyServerAddr *net.TCPAddr, shadow func(net.Conn) net.Conn) {
 
 	// 连接 Proxy Server
 	dstServer, err := net.DialTCP("tcp", nil, proxyServerAddr)
 	if err != nil {
-		utils.Logger.Debug("连接 Proxy Server 错误!!!")
+		utils.Logger.Debug("连接 Proxy Server 错误!!!, ", err)
 		return
 	}
+	defer dstServer.Close()
 
-	core.SocksClient(client, dstServer, method)
+	sd := shadow(dstServer)
+	core.SocksClient(client, sd)
 }
 
 func toMethod(method int) byte {
