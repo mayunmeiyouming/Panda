@@ -23,16 +23,16 @@ var clientCmd = &cobra.Command{
 		}
 	},
 	Run: func(cmd *cobra.Command, args []string) {
-		utils.Logger.Info(cipher)
-		panda.Client(localAddr, remoteAddr, cipher, password)
+		utils.Logger.Info("加密: ", cipher)
+		panda.Client(http, socks, remoteAddr, cipher, password)
 	},
 }
 
 func init() {
-	clientCmd.Flags().StringVar(&socks, "s", "ss://AES-256-GCM:astaxie12798akljzmknmfahkjkljlfk@:8080", "server listen address or url")
-	clientCmd.Flags().StringVar(&localAddr, "localAddr", ":2080", "本地监听端口号，默认 2080")
+	clientCmd.Flags().StringVar(&socks, "s", ":2080", "server listen address or url")
+	clientCmd.Flags().StringVar(&http, "http", ":2080", "本地监听端口号，默认 2080")
 	clientCmd.Flags().StringVar(&remoteAddr, "remoteAddr", ":8080", "代理服务器端口号，默认 8080")
-	clientCmd.Flags().StringVar(&cipher, "cipher", "DUMMY", "available ciphers: "+strings.Join(core.ListCipher(), " "))
+	clientCmd.Flags().StringVar(&cipher, "cipher", "AES_256_GCM", "available ciphers: "+strings.Join(core.ListCipher(), " "))
 	clientCmd.Flags().StringVar(&password, "password", "astaxie12798akljzmknmfahkjkljlfk", "password")
 	clientCmd.Flags().BoolVar(&udpsocks, "u", false, "(client-only) Enable UDP support for SOCKS")
 	rootCmd.AddCommand(clientCmd)

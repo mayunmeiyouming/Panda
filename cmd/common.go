@@ -10,6 +10,7 @@ var udp bool
 var plugin string
 var pluginOpts string
 var socks string
+var http string
 var localAddr string
 var remoteAddr string
 var udpsocks bool

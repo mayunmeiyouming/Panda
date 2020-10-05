@@ -1,16 +1,11 @@
-package core
+package socks
 
 import (
 	"Panda/utils"
-	"bufio"
-	"bytes"
 	"encoding/binary"
 	"errors"
-	"io"
 	"net"
-	"net/http"
 	"strconv"
-	"strings"
 )
 
 // SocksClientAuthResponse ...
@@ -20,7 +15,7 @@ type SocksClientAuthResponse struct {
 }
 
 // SocksClientAuth 是协商认证阶段
-func SocksClientAuth(client *net.TCPConn, dstServer net.Conn) (*[]byte, *int, error) {
+func SocksClientAuth(client net.Conn, dstServer net.Conn) (*[]byte, *int, error) {
 	// 第一阶段协议版本及认证方式
 	socksClientAuthResponse, err := RequestVersionAndMethodAuth(dstServer)
 	if err != nil {
@@ -71,55 +66,21 @@ func RequestVersionAndMethodAuth(dstServer net.Conn) (*SocksClientAuthResponse, 
 }
 
 // RequestAddressAuth 第二阶段根据认证方式执行对应的认证，返回第三阶段请求信息
-func RequestAddressAuth(client *net.TCPConn, dstServer net.Conn, socksClientAuthResponse *SocksClientAuthResponse) (*[]byte, *int, error) {
-	buff := make([]byte, 0, 2048)
-
-	// n := 0
-	reader := bufio.NewReader(client)
-	for {
-		temp, err := reader.ReadBytes('\n')
-		if err == io.EOF {
-			break
-		}
-		if err != nil {
-			return nil, nil, err
-		}
-
-		buff = append(buff[:len(buff)], temp[:len(temp)]...)
-		// n += len(temp)
-
-		if len(temp) == 2 {
-			break
-		}
-	}
-
-	utils.Logger.Info("HTTP包: ", string(buff[:len(buff)]))
-
-	// 解析 http 地址
-	re := bytes.NewReader(buff[:len(buff)])
-	a := bufio.NewReader(re)
-	request, err := http.ReadRequest(a)
+func RequestAddressAuth(client net.Conn, dstServer net.Conn, socksClientAuthResponse *SocksClientAuthResponse) (*[]byte, *int, error) {
+	buff, dstAddr, dstPort, err := ParseHTTP(client)
 	if err != nil {
-		utils.Logger.Info("HTTP 包有错误: ", string(buff))
 		return nil, nil, err
-	}
-	utils.Logger.Info("请求地址: ", request.Host)
-	dst := strings.Split(request.Host, ":")
-	var dstAddr = dst[0]
-	var dstPort = "80"
-	if len(dst) == 2 && dst[1] != "" {
-		dstPort = dst[1]
 	}
 
 	// 暂时默认域名
 	resp := []byte{0x05, 0x01, 0x00, 0x03}
-	resp = append(resp, byte(len([]byte(dstAddr)))) // 域名字节长度
-	resp = append(resp, []byte(dstAddr)...)         // 域名
+	resp = append(resp, byte(len([]byte(*dstAddr)))) // 域名字节长度
+	resp = append(resp, []byte(*dstAddr)...)         // 域名
 	// 端口
 	b := []byte{0, 0}
-	r, _ := strconv.Atoi(dstPort)
+	r, _ := strconv.Atoi(*dstPort)
 	utils.Logger.Info("端口: ", r)
-	utils.Logger.Info("Domain: ", dstAddr)
+	utils.Logger.Info("Domain: ", *dstAddr)
 	binary.BigEndian.PutUint16(b, uint16(r))
 	resp = append(resp, b[:2]...)
 
