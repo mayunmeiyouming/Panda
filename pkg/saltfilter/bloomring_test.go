@@ -1,20 +1,20 @@
-package internal_test
+package saltfilter_test
 
 import (
 	"fmt"
 	"os"
 	"testing"
 
-	"Panda/internal"
+	"Panda/pkg/saltfilter"
 )
 
 var (
-	bloomRingInstance *internal.BloomRing
+	bloomRingInstance *saltfilter.BloomRing
 )
 
 func TestMain(m *testing.M) {
-	bloomRingInstance = internal.NewBloomRing(internal.DefaultSFSlot, int(internal.DefaultSFCapacity),
-		internal.DefaultSFFPR)
+	bloomRingInstance = saltfilter.NewBloomRing(saltfilter.DefaultSFSlot, int(saltfilter.DefaultSFCapacity),
+	saltfilter.DefaultSFFPR)
 	os.Exit(m.Run())
 }
 
@@ -33,7 +33,7 @@ func TestBloomRing_NilAdd(t *testing.T) {
 			t.Fatalf("Should not got panic while adding item: %v", any)
 		}
 	}()
-	var nilRing *internal.BloomRing
+	var nilRing *saltfilter.BloomRing
 	nilRing.Add(make([]byte, 16))
 }
 
@@ -46,7 +46,7 @@ func TestBloomRing_Test(t *testing.T) {
 }
 
 func TestBloomRing_NilTestIsFalse(t *testing.T) {
-	var nilRing *internal.BloomRing
+	var nilRing *saltfilter.BloomRing
 	if nilRing.Test([]byte("shadowsocks")) {
 		t.Fatal("Test should return false for nil BloomRing")
 	}
@@ -54,7 +54,7 @@ func TestBloomRing_NilTestIsFalse(t *testing.T) {
 
 func BenchmarkBloomRing(b *testing.B) {
 	// Generate test samples with different length
-	samples := make([][]byte, internal.DefaultSFCapacity-internal.DefaultSFSlot)
+	samples := make([][]byte, saltfilter.DefaultSFCapacity-saltfilter.DefaultSFSlot)
 	var checkPoints [][]byte
 	for i := 0; i < len(samples); i++ {
 		samples[i] = []byte(fmt.Sprint(i))
@@ -69,7 +69,7 @@ func BenchmarkBloomRing(b *testing.B) {
 }
 
 func benchmarkBloomRing(samples, checkPoints [][]byte, slot int) func(*testing.B) {
-	filter := internal.NewBloomRing(slot, int(internal.DefaultSFCapacity), internal.DefaultSFFPR)
+	filter := saltfilter.NewBloomRing(slot, int(saltfilter.DefaultSFCapacity), saltfilter.DefaultSFFPR)
 	for _, sample := range samples {
 		filter.Add(sample)
 	}

@@ -1,4 +1,4 @@
-package internal
+package saltfilter
 
 import (
 	"hash/fnv"

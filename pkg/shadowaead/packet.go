@@ -7,7 +7,7 @@ import (
 	"net"
 	"sync"
 
-	"Panda/internal"
+	"Panda/pkg/saltfilter"
 )
 
 // ErrShortPacket means that the packet is too short for a valid encrypted packet.
@@ -29,7 +29,7 @@ func Pack(dst, plaintext []byte, ciph Cipher) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	internal.AddSalt(salt)
+	saltfilter.AddSalt(salt)
 
 	if len(dst) < saltSize+len(plaintext)+aead.Overhead() {
 		return nil, io.ErrShortBuffer
@@ -46,14 +46,14 @@ func Unpack(dst, pkt []byte, ciph Cipher) ([]byte, error) {
 		return nil, ErrShortPacket
 	}
 	salt := pkt[:saltSize]
-	if internal.TestSalt(salt) {
+	if saltfilter.TestSalt(salt) {
 		return nil, ErrRepeatedSalt
 	}
 	aead, err := ciph.Decrypter(salt)
 	if err != nil {
 		return nil, err
 	}
-	internal.AddSalt(salt)
+	saltfilter.AddSalt(salt)
 	if len(pkt) < saltSize+aead.Overhead() {
 		return nil, ErrShortPacket
 	}

@@ -7,7 +7,7 @@ import (
 	"io"
 	"net"
 
-	"Panda/internal"
+	"Panda/pkg/saltfilter"
 )
 
 // payloadSizeMask is the maximum size of payload in bytes.
@@ -205,14 +205,14 @@ func (c *streamConn) initReader() error {
 	if _, err := io.ReadFull(c.Conn, salt); err != nil {
 		return err
 	}
-	if internal.TestSalt(salt) {
+	if saltfilter.TestSalt(salt) {
 		return ErrRepeatedSalt
 	}
 	aead, err := c.Decrypter(salt)
 	if err != nil {
 		return err
 	}
-	internal.AddSalt(salt)
+	saltfilter.AddSalt(salt)
 
 	c.r = newReader(c.Conn, aead)
 	return nil
@@ -249,7 +249,7 @@ func (c *streamConn) initWriter() error {
 	if err != nil {
 		return err
 	}
-	internal.AddSalt(salt)
+	saltfilter.AddSalt(salt)
 	c.w = newWriter(c.Conn, aead)
 	return nil
 }
