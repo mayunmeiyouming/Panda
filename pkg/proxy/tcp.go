@@ -6,7 +6,7 @@ import (
 	"net"
 )
 
-// TCPRemote ...
+// TCPRemote is only server
 func TCPRemote(addr string, shadow func(net.Conn) net.Conn) {
 	listenAddr, err := net.ResolveTCPAddr("tcp", addr)
 	l, err := net.ListenTCP("tcp", listenAddr)
@@ -22,45 +22,42 @@ func TCPRemote(addr string, shadow func(net.Conn) net.Conn) {
 		}
 		defer client.Close()
 
-		utils.Logger.Debug("正在处理请求中")
+		// utils.Logger.Debug("正在处理请求中")
 		go func() {
 			sc := shadow(client)
 
-			// // 协商阶段
-			// socksAddressRequest, _, err := socks.SocksAuth(sc)
-			// if err != nil {
-			// 	return
-			// }
-			tgt, err := socks.ReadAddr(sc)
+			target, err := socks.ReadAddr(sc)
+			if err != nil {
+				utils.Logger.Error("获取地址出错: ", err)
+				return
+			}
 
-			utils.Logger.Info("代理地址: ", string(addr))
+			utils.Logger.Info("代理地址: ", target.String())
 			// 代理阶段
-			destinationServer, err := net.Dial("tcp", tgt.String())
+			destinationServer, err := net.Dial("tcp", target.String())
 			if err != nil {
 				return
 			}
 			defer destinationServer.Close()
 
 			relay(destinationServer, sc)
-
-			utils.Logger.Info("代理成功")
 		}()
 	}
 }
 
-// TCPLocal ...
+// TCPLocal is only client
 // Listen on addr and proxy to server to reach target from getAddr.
 func TCPLocal(addr, server string, shadow func(net.Conn) net.Conn, getAddr func(c net.Conn) (*socks.SocksAddressRequest, *byte, error)) {
 	l, err := net.Listen("tcp", addr)
 	if err != nil {
-		utils.Logger.Info("failed to listen on %s: %v", addr, err)
+		utils.Logger.Info("failed to listen on ", addr, ": ", err)
 		return
 	}
 
 	for {
 		c, err := l.Accept()
 		if err != nil {
-			utils.Logger.Info("failed to accept: %s", err)
+			utils.Logger.Info("failed to accept: ", err)
 			continue
 		}
 
@@ -68,13 +65,13 @@ func TCPLocal(addr, server string, shadow func(net.Conn) net.Conn, getAddr func(
 			defer c.Close()
 			socksAddressRequest, _, err := getAddr(c)
 			if err != nil {
-				utils.Logger.Info("failed to get target address: %v", err)
+				utils.Logger.Info("failed to get target address: ", err)
 				return
 			}
 
 			rc, err := net.Dial("tcp", server)
 			if err != nil {
-				utils.Logger.Info("failed to connect to server %v: %v", server, err)
+				utils.Logger.Info("failed to connect to server ", server, ": ", err)
 				return
 			}
 			defer rc.Close()
@@ -82,11 +79,11 @@ func TCPLocal(addr, server string, shadow func(net.Conn) net.Conn, getAddr func(
 			rc = shadow(rc)
 
 			if _, err = rc.Write(socksAddressRequest.DSTADDR); err != nil {
-				utils.Logger.Info("failed to send target address: %v", err)
+				utils.Logger.Info("failed to send target address: ", err)
 				return
 			}
 
-			utils.Logger.Info("proxy %s <-> %s <-> %s", c.RemoteAddr(), server, socksAddressRequest.DSTADDR)
+			utils.Logger.Info("proxy ", c.RemoteAddr(), " <-> ", server, " <-> ", socksAddressRequest.DSTADDR)
 			// if err = relay(rc, c); err != nil {
 			// 	utils.Logger.Info("relay error: %v", err)
 			// }

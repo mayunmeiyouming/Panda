@@ -7,7 +7,7 @@ import (
 	"Panda/pkg/socks"
 )
 
-// SocksLocal ...
+// SocksLocal is only client
 // Create a SOCKS server listening on addr and proxy to server.
 func SocksLocal(addr, server string, shadow func(net.Conn) net.Conn) {
 	utils.Logger.Info("SOCKS proxy ", addr, " <-> ", server)

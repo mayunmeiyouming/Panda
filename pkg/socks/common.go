@@ -43,13 +43,13 @@ func ParseHTTP(client net.Conn) ([]byte, *string, *string, error) {
 		return nil, nil, nil, err
 	}
 
-	utils.Logger.Info("请求地址: ", request.Host)
 	dst := strings.Split(request.Host, ":")
 	var dstAddr = dst[0]
 	var dstPort = "80"
 	if len(dst) == 2 && dst[1] != "" {
 		dstPort = dst[1]
 	}
+	utils.Logger.Info("请求地址: ", dstAddr, ":", dstPort)
 
 	return buff, &dstAddr, &dstPort, nil
 }
@@ -86,7 +86,7 @@ func (a Addr) String() string {
 	return net.JoinHostPort(host, port)
 }
 
-func readAddr(r io.Reader, b []byte) (Addr, error) {
+func readAddr(r io.Reader, b Addr) (Addr, error) {
 	if len(b) < MaxAddrLen {
 		return nil, io.ErrShortBuffer
 	}
