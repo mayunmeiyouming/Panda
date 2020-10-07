@@ -30,7 +30,7 @@ var clientCmd = &cobra.Command{
 
 func init() {
 	clientCmd.Flags().StringVar(&socks, "s", ":2080", "server listen address or url")
-	clientCmd.Flags().StringVar(&http, "http", ":2080", "本地监听端口号，默认 2080")
+	clientCmd.Flags().StringVar(&http, "http", "", "本地监听端口号，默认 2080")
 	clientCmd.Flags().StringVar(&remoteAddr, "remoteAddr", ":8080", "代理服务器端口号，默认 8080")
 	clientCmd.Flags().StringVar(&cipher, "cipher", "AES_256_GCM", "available ciphers: "+strings.Join(core.ListCipher(), " "))
 	clientCmd.Flags().StringVar(&password, "password", "astaxie12798akljzmknmfahkjkljlfk", "password")

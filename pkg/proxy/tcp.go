@@ -78,15 +78,17 @@ func TCPLocal(addr, server string, shadow func(net.Conn) net.Conn, getAddr func(
 
 			rc = shadow(rc)
 
-			if _, err = rc.Write(socksAddressRequest.DSTADDR); err != nil {
+			addr := makeAddrRequest(socksAddressRequest.ADDR, socksAddressRequest.PORT)
+
+			if _, err = rc.Write(addr); err != nil {
 				utils.Logger.Info("failed to send target address: ", err)
 				return
 			}
 
-			utils.Logger.Info("proxy ", c.RemoteAddr(), " <-> ", server, " <-> ", socksAddressRequest.DSTADDR)
-			// if err = relay(rc, c); err != nil {
-			// 	utils.Logger.Info("relay error: %v", err)
-			// }
+			utils.Logger.Info("proxy ", c.RemoteAddr(), " <-> ", server, " <-> ", socksAddressRequest.ADDR)
+			if err = relay(rc, c); err != nil {
+				utils.Logger.Info("relay error: ", err)
+			}
 		}()
 	}
 }

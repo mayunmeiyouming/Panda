@@ -1,11 +1,12 @@
 package socks
 
 import (
-	"time"
 	"Panda/utils"
 	"encoding/binary"
 	"errors"
 	"net"
+	"strconv"
+	"time"
 )
 
 // SocksAuthRequest 是客户端的协商请求
@@ -21,6 +22,8 @@ type SocksAddressRequest struct {
 	CMD       uint8
 	RSV       uint8 // 保留位
 	ATYP      uint8
+	ADDR      string
+	PORT      string
 	DSTADDR   []byte
 	DSTPORT   uint16
 	DSTDOMAIN string
@@ -115,15 +118,17 @@ func parseSocksAddressRequest(conn net.Conn) (*SocksAddressRequest, error) {
 	if socksAddressRequest.ATYP == 1 {
 		// IPv4
 		socksAddressRequest.DSTADDR = buf[4:8]
-		utils.Logger.Debug("IPv4")
+		socksAddressRequest.ADDR = string(buf[4:8])
+		// utils.Logger.Debug("IPv4")
 	} else if socksAddressRequest.ATYP == 3 {
 		// Domain
 		l := int(buf[4])
-		if l + 7 != n {
+		if l+7 != n {
 			return nil, errors.New("第二阶段请求包不完整")
 		}
 
 		socksAddressRequest.DSTDOMAIN = string(buf[5 : n-2])
+		socksAddressRequest.ADDR = string(buf[5 : n-2])
 		ipAddr, err := net.ResolveIPAddr("ip", socksAddressRequest.DSTDOMAIN)
 		if err != nil {
 			return nil, err
@@ -133,6 +138,7 @@ func parseSocksAddressRequest(conn net.Conn) (*SocksAddressRequest, error) {
 	} else if socksAddressRequest.ATYP == 4 {
 		// IPv6
 		socksAddressRequest.DSTADDR = buf[4 : 4+net.IPv6len]
+		socksAddressRequest.ADDR = string(buf[4 : 4+net.IPv6len])
 		utils.Logger.Debug("IPv6")
 	}
 
@@ -142,6 +148,8 @@ func parseSocksAddressRequest(conn net.Conn) (*SocksAddressRequest, error) {
 		IP:   socksAddressRequest.DSTADDR,
 		Port: int(socksAddressRequest.DSTPORT),
 	}
+
+	socksAddressRequest.PORT = strconv.Itoa(int(socksAddressRequest.DSTPORT))
 
 	utils.Logger.Debug("二次协商请求: ", socksAddressRequest)
 	utils.Logger.Debug("客户端需要访问的服务器地址: ", socksAddressRequest.DSTADDR)

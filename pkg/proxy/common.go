@@ -1,10 +1,12 @@
 package proxy
 
 import (
+	"encoding/binary"
 	"errors"
 	"io"
 	"net"
 	"os"
+	"strconv"
 	"sync"
 	"time"
 )
@@ -30,4 +32,34 @@ func relay(left, right net.Conn) error {
 		return err
 	}
 	return nil
+}
+
+// 构造地址请求
+func makeAddrRequest(host string, port string) []byte {
+	addr := make([]byte, 0)
+
+	address := net.ParseIP(host)
+	if address != nil {
+		// IPv4
+		if len(address) == 4 {
+			addr = append(addr, 0x01)
+		} else {
+			// IPv6
+			addr = append(addr, 0x04)
+		}
+	} else {
+		addr = append(addr, 0x03)
+		addr = append(addr, byte(len([]byte(host)))) // 域名字节长度
+	}
+
+	// 域名
+	addr = append(addr, []byte(host)...)
+
+	// 端口
+	b := []byte{0, 0}
+	r, _ := strconv.Atoi(port)
+	binary.BigEndian.PutUint16(b, uint16(r))
+	addr = append(addr, b[:2]...)
+
+	return addr
 }

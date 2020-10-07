@@ -3,10 +3,8 @@ package proxy
 import (
 	"Panda/pkg/socks"
 	"Panda/utils"
-	"encoding/binary"
 	"fmt"
 	"net"
-	"strconv"
 )
 
 // HTTPLocal is only client
@@ -72,34 +70,4 @@ func handleProxyRequest(client *net.TCPConn, proxyServerAddr *net.TCPAddr, shado
 
 	//进行转发
 	relay(sd, client)
-}
-
-// 构造地址请求
-func makeAddrRequest(host string, port string) []byte {
-	addr := make([]byte, 0)
-
-	address := net.ParseIP(host)
-	if address != nil {
-		// IPv4
-		if len(address) == 4 {
-			addr = append(addr, 0x01)
-		} else {
-			// IPv6
-			addr = append(addr, 0x04)
-		}
-	} else {
-		addr = append(addr, 0x03)
-		addr = append(addr, byte(len([]byte(host)))) // 域名字节长度
-	}
-
-	// 域名
-	addr = append(addr, []byte(host)...)
-
-	// 端口
-	b := []byte{0, 0}
-	r, _ := strconv.Atoi(port)
-	binary.BigEndian.PutUint16(b, uint16(r))
-	addr = append(addr, b[:2]...)
-
-	return addr
 }

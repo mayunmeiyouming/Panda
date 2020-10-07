@@ -17,7 +17,7 @@ func Client(http string, socks string, remoteAddr string, cipher string, passwor
 	}
 
 	if socks != "" {
-
+		go proxy.SocksLocal(socks, remoteAddr, ciph.StreamConn)
 	}
 
 	if http != "" {
