@@ -15,6 +15,6 @@ var versionCmd = &cobra.Command{
   Short: "Print the version number of Panda",
   Long:  `All software has versions. This is Panda's`,
   Run: func(cmd *cobra.Command, args []string) {
-    fmt.Println("Panda v0.0.1")
+    fmt.Println("Panda v0.10")
   },
 }

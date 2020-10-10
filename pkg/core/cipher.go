@@ -41,7 +41,7 @@ var aeadList = map[string]struct {
 }{
 	aeadAes128Gcm: {16, shadowaead.AESGCM},
 	aeadAes256Gcm: {32, shadowaead.AESGCM},
-	// aeadChacha20Poly1305: {32, shadowaead.Chacha20Poly1305},
+	aeadChacha20Poly1305: {32, shadowaead.Chacha20Poly1305},
 }
 
 // ListCipher returns a list of available cipher names sorted alphabetically.

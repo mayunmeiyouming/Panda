@@ -8,6 +8,7 @@ import (
 	"io"
 	"strconv"
 
+	"golang.org/x/crypto/chacha20poly1305"
 	"golang.org/x/crypto/hkdf"
 )
 
@@ -49,7 +50,7 @@ func (a *metaCipher) SaltSize() int {
 
 func (a *metaCipher) Encrypter(salt []byte) (cipher.AEAD, error) {
 	subkey := make([]byte, a.KeySize())
-	
+
 	// 派生出一个能达到密码学强度的密钥
 	hkdfSHA1(a.psk, salt, []byte("ss-subkey"), subkey)
 	return a.makeAEAD(subkey)
@@ -81,4 +82,13 @@ func AESGCM(psk []byte) (Cipher, error) {
 		return nil, aes.KeySizeError(l)
 	}
 	return &metaCipher{psk: psk, makeAEAD: aesGCM}, nil
+}
+
+// Chacha20Poly1305 ...
+func Chacha20Poly1305(psk []byte) (Cipher, error) {
+	if len(psk) != chacha20poly1305.KeySize {
+		return nil, KeySizeError(chacha20poly1305.KeySize)
+	}
+
+	return &metaCipher{psk: psk, makeAEAD: chacha20poly1305.New}, nil
 }
