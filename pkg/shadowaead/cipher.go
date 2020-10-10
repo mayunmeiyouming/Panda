@@ -74,10 +74,10 @@ func aesGCM(key []byte) (cipher.AEAD, error) {
 }
 
 // AESGCM creates a new Cipher with a pre-shared key. len(psk) must be
-// one of 16, 24, or 32 to select AES-128/196/256-GCM.
+// one of 16, 24, or 32 to select AES-128/192/256-GCM.
 func AESGCM(psk []byte) (Cipher, error) {
 	switch l := len(psk); l {
-	case 16, 24, 32: // AES 128/196/256
+	case 16, 24, 32: // AES 128/192/256
 	default:
 		return nil, aes.KeySizeError(l)
 	}

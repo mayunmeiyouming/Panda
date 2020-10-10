@@ -30,6 +30,7 @@ var ErrCipherNotSupported = errors.New("cipher not supported")
 
 const (
 	aeadAes128Gcm        = "AEAD_AES_128_GCM"
+	aeadAes192Gcm        = "AEAD_AES_192_GCM"
 	aeadAes256Gcm        = "AEAD_AES_256_GCM"
 	aeadChacha20Poly1305 = "AEAD_CHACHA20_POLY1305"
 )
@@ -40,6 +41,7 @@ var aeadList = map[string]struct {
 	New     func([]byte) (shadowaead.Cipher, error)
 }{
 	aeadAes128Gcm: {16, shadowaead.AESGCM},
+	aeadAes192Gcm: {24, shadowaead.AESGCM},
 	aeadAes256Gcm: {32, shadowaead.AESGCM},
 	aeadChacha20Poly1305: {32, shadowaead.Chacha20Poly1305},
 }
@@ -61,10 +63,12 @@ func PickCipher(name string, password string) (CipherConn, error) {
 	switch name {
 	case "DUMMY":
 		return &dummy{}, nil
-	// case "CHACHA20-IETF-POLY1305":
-	// 	name = aeadChacha20Poly1305
-	// case "AES-128-GCM":
-	// 	name = aeadAes128Gcm
+	case "CHACHA20-IETF-POLY1305":
+		name = aeadChacha20Poly1305
+	case "AES-128-GCM":
+		name = aeadAes128Gcm
+	case "AES-192-GCM":
+		name = aeadAes192Gcm
 	case "AES-256-GCM":
 		name = aeadAes256Gcm
 	}
