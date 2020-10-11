@@ -3,13 +3,7 @@ Panda 是一个由 Golang 实现的代理服务器
 
 # TODO
 
-服务端兼容常见代理软件的非加密模式和部分对称加密
-
-# METHOD
-
-0 不需要认证
-
-1 AES-256
+支持linux系统的pac代理
 
 # HTTP GET
 
@@ -26,3 +20,5 @@ GET http://www.huang314.cn/img/blog.png HTTP/1.1\r\nHost: www.huang314.cn\r\nUse
 [socks5proxy](https://github.com/shikanon/socks5proxy)
 
 [go 修改 windows 注册表](https://xz.aliyun.com/t/6509)
+
+[PAC](http://pac.newfuture.cc/)

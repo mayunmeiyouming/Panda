@@ -64,7 +64,10 @@ func parseSocksAuthRequest(conn net.Conn) (*SocksAuthRequest, error) {
 			NMETHODS: int32(b[1]),
 			METHODS:  b[2:n],
 		}
-		utils.Logger.Debug("一次协商请求: ", socksAuthRequest)
+		utils.Logger.Debug("一次协商请求: ", *socksAuthRequest)
+		if socksAuthRequest.VERSION != 5 {
+			return nil, errors.New("只支持 SOCKS5 协议，该协议为 SOCKS"+strconv.Itoa(int(socksAuthRequest.VERSION)))
+		}
 		return socksAuthRequest, nil
 	}
 	utils.Logger.Debug("认证协议格式错误")
