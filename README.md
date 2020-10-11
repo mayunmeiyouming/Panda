@@ -3,7 +3,9 @@ Panda 是一个由 Golang 实现的代理服务器
 
 # TODO
 
-支持linux系统的pac代理
+1. 优化代理速度
+
+2. 增加测速
 
 # HTTP GET
 
