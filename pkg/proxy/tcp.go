@@ -20,10 +20,11 @@ func TCPRemote(addr string, shadow func(net.Conn) net.Conn) {
 		if err != nil {
 			utils.Logger.Error(err)
 		}
-		defer client.Close()
 
 		// utils.Logger.Debug("正在处理请求中")
 		go func() {
+			defer client.Close()
+			
 			sc := shadow(client)
 
 			target, err := socks.ReadAddr(sc)

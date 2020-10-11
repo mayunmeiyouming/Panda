@@ -33,14 +33,14 @@ func HTTPLocal(httpAddr string, remoteAddr string, shadow func(net.Conn) net.Con
 		if err != nil {
 			utils.Logger.Error(err)
 		}
-		defer client.Close()
 
 		go handleProxyRequest(client, proxyServerAddr, shadow)
 	}
 }
 
 func handleProxyRequest(client *net.TCPConn, proxyServerAddr *net.TCPAddr, shadow func(net.Conn) net.Conn) {
-
+	defer client.Close()
+	
 	// 连接 Proxy Server
 	dstServer, err := net.DialTCP("tcp", nil, proxyServerAddr)
 	if err != nil {
