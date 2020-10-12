@@ -4,7 +4,15 @@ import (
 	"Panda/pkg/socks"
 	"Panda/utils"
 	"net"
+	"time"
 )
+
+func tcpKeepAlive(c net.Conn) {
+	if tcp, ok := c.(*net.TCPConn); ok {
+		tcp.SetKeepAlive(true)
+		tcp.SetKeepAlivePeriod(3 * time.Minute)
+	}
+}
 
 // TCPRemote is only server
 func TCPRemote(addr string, shadow func(net.Conn) net.Conn) {
@@ -24,7 +32,9 @@ func TCPRemote(addr string, shadow func(net.Conn) net.Conn) {
 		// utils.Logger.Debug("正在处理请求中")
 		go func() {
 			defer client.Close()
-			
+
+			tcpKeepAlive(client)
+
 			sc := shadow(client)
 
 			target, err := socks.ReadAddr(sc)
@@ -41,7 +51,15 @@ func TCPRemote(addr string, shadow func(net.Conn) net.Conn) {
 			}
 			defer destinationServer.Close()
 
-			relay(destinationServer, sc)
+			tcpKeepAlive(destinationServer)
+
+			utils.Logger.Debug("proxy ", client.RemoteAddr(), " <-> ", target.String())
+			if err = relay(destinationServer, sc); err != nil {
+				if err, ok := err.(net.Error); ok && err.Timeout() {
+					return // ignore i/o timeout
+				}
+				utils.Logger.Error("relay error: ", err)
+			}
 		}()
 	}
 }
@@ -64,6 +82,9 @@ func TCPLocal(addr, server string, shadow func(net.Conn) net.Conn, getAddr func(
 
 		go func() {
 			defer c.Close()
+
+			tcpKeepAlive(c)
+
 			socksAddressRequest, _, err := getAddr(c)
 			if err != nil {
 				utils.Logger.Info("failed to get target address: ", err)
@@ -77,6 +98,8 @@ func TCPLocal(addr, server string, shadow func(net.Conn) net.Conn, getAddr func(
 			}
 			defer rc.Close()
 
+			tcpKeepAlive(rc)
+
 			rc = shadow(rc)
 
 			addr := makeAddrRequest(socksAddressRequest.ADDR, socksAddressRequest.PORT)
@@ -88,6 +111,9 @@ func TCPLocal(addr, server string, shadow func(net.Conn) net.Conn, getAddr func(
 
 			utils.Logger.Info("proxy ", c.RemoteAddr(), " <-> ", server, " <-> ", socksAddressRequest.ADDR)
 			if err = relay(rc, c); err != nil {
+				if err, ok := err.(net.Error); ok && err.Timeout() {
+					return // ignore i/o timeout
+				}
 				utils.Logger.Info("relay error: ", err)
 			}
 		}()

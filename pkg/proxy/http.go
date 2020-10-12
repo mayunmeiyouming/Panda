@@ -40,7 +40,9 @@ func HTTPLocal(httpAddr string, remoteAddr string, shadow func(net.Conn) net.Con
 
 func handleProxyRequest(client *net.TCPConn, proxyServerAddr *net.TCPAddr, shadow func(net.Conn) net.Conn) {
 	defer client.Close()
-	
+
+	tcpKeepAlive(client)
+
 	// 连接 Proxy Server
 	dstServer, err := net.DialTCP("tcp", nil, proxyServerAddr)
 	if err != nil {
@@ -48,6 +50,8 @@ func handleProxyRequest(client *net.TCPConn, proxyServerAddr *net.TCPAddr, shado
 		return
 	}
 	defer dstServer.Close()
+
+	tcpKeepAlive(dstServer)
 
 	sd := shadow(dstServer)
 
@@ -69,5 +73,11 @@ func handleProxyRequest(client *net.TCPConn, proxyServerAddr *net.TCPAddr, shado
 	}
 
 	//进行转发
-	relay(sd, client)
+	utils.Logger.Info("proxy ", client.RemoteAddr(), " <-> ", *host+":"+*port)
+	if err = relay(sd, client); err != nil {
+		if err, ok := err.(net.Error); ok && err.Timeout() {
+			return // ignore i/o timeout
+		}
+		utils.Logger.Info("relay error: ", err)
+	}
 }
